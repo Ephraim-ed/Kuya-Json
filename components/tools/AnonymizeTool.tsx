@@ -22,14 +22,29 @@ import {
 } from "@/lib/json/anonymize";
 
 let ruleSeq = 0;
-function newRule(): AnonRule {
-  return { id: `r${ruleSeq++}`, match: "key", pattern: "", strategy: "fake", enabled: true };
+function newRule(strategy: Strategy = "fake"): AnonRule {
+  return { id: `r${ruleSeq++}`, match: "key", pattern: "", strategy, enabled: true };
 }
+
+const STRATEGY_OPTIONS = [
+  { value: "fake", label: "Fake (realistic)" },
+  { value: "mask", label: "Mask (a***z)" },
+  { value: "redact", label: "Redact (***)" },
+  { value: "hash", label: "Hash (stable)" },
+];
 
 export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
   const [rules, setRules] = useState<AnonRule[]>([]);
   const [count, setCount] = useState<number | null>(null);
+  // Global strategy applied to every rule / selected key.
+  const [allStrategy, setAllStrategy] = useState<Strategy>("fake");
   const { push, clearSource } = useConsole();
+
+  // Set the anonymization type for all selected keys at once.
+  function applyStrategyToAll(strategy: Strategy) {
+    setAllStrategy(strategy);
+    setRules((rs) => rs.map((r) => ({ ...r, strategy })));
+  }
 
   const detected: DetectedPii[] = useMemo(() => {
     const v = validate(input);
@@ -50,7 +65,10 @@ export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
   }
 
   function anonymizeAllPii() {
-    const autoRules = rulesFromDetected(detected);
+    const autoRules = rulesFromDetected(detected).map((r) => ({
+      ...r,
+      strategy: allStrategy,
+    }));
     setRules(autoRules);
     run(autoRules);
   }
@@ -110,6 +128,15 @@ export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
 
   const rulesList = (
     <div className="h-full space-y-2 overflow-auto p-2">
+      <div className="flex items-center gap-2 rounded border border-border bg-bg px-2 py-1.5">
+        <span className="shrink-0 text-xs font-medium text-gray-400">All keys:</span>
+        <Select
+          className="flex-1"
+          value={allStrategy}
+          onChange={(v) => applyStrategyToAll(v as Strategy)}
+          options={STRATEGY_OPTIONS}
+        />
+      </div>
       {rules.length === 0 && (
         <p className="text-xs text-gray-600">
           Add a rule, or use “Anonymize PII” to mask detected PII.
@@ -152,12 +179,7 @@ export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
               className="w-full"
               value={r.strategy}
               onChange={(v) => updateRule(r.id, { strategy: v as Strategy })}
-              options={[
-                { value: "fake", label: "Fake (realistic)" },
-                { value: "mask", label: "Mask (a***z)" },
-                { value: "redact", label: "Redact (***)" },
-                { value: "hash", label: "Hash (stable)" },
-              ]}
+              options={STRATEGY_OPTIONS}
             />
           </div>
         ))}
@@ -179,7 +201,9 @@ export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
         >
           Anonymize
         </Button>
-        <Button onClick={() => setRules((rs) => [...rs, newRule()])}>+ Rule</Button>
+        <Button onClick={() => setRules((rs) => [...rs, newRule(allStrategy)])}>
+          + Rule
+        </Button>
       </div>
       <div className="min-h-0 flex-1">
         <Split

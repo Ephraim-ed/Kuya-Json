@@ -160,6 +160,101 @@ h3 {
   margin: 0;
 }
 
+/* CodeMirror merge view (Diff): fill the height and let each editor scroll. */
+.cm-mergeView {
+  height: 100%;
+}
+.cm-mergeViewEditors {
+  height: 100%;
+  align-items: stretch;
+}
+.cm-mergeViewEditor {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  min-width: 0;
+}
+.cm-mergeViewEditor .cm-editor {
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+.cm-mergeViewEditor .cm-scroller {
+  overflow: auto;
+}
+
+/* Hide all diff highlights (e.g. while the right side is still empty). */
+.diff-hidden .cm-changedLine,
+.diff-hidden .cm-changedText,
+.diff-hidden .cm-deletedChunk,
+.diff-hidden .cm-deletedText,
+.diff-hidden .cm-insertedLine,
+.diff-hidden .cm-changedLineGutter,
+.diff-hidden .cm-deletedLineGutter,
+.diff-hidden .cm-inlineChangedLine,
+.diff-hidden .cm-inlineChangedLineGutter {
+  background: transparent !important;
+  text-decoration: none !important;
+}
+
+/* Diff colours (theme-aware): removed (left) red, added (right) green. */
+.cm-merge-a .cm-changedLine {
+  background-color: rgba(248, 81, 73, 0.14);
+}
+.cm-merge-a .cm-changedText {
+  background-color: rgba(248, 81, 73, 0.3);
+  background-image: none;
+}
+.cm-merge-b .cm-changedLine {
+  background-color: rgba(46, 160, 67, 0.16);
+}
+.cm-merge-b .cm-changedText {
+  background-color: rgba(46, 160, 67, 0.32);
+  background-image: none;
+}
+
+/* Inline deleted-chunk widget */
+.cm-deletedChunk {
+  background-color: rgba(248, 81, 73, 0.12);
+}
+.cm-deletedChunk .cm-deletedText {
+  background-color: rgba(248, 81, 73, 0.32);
+  text-decoration: line-through;
+}
+
+/* Change gutter markers */
+.cm-changeGutter .cm-changedLineGutter {
+  background-color: rgba(56, 139, 253, 0.45);
+}
+
+/* Collapsed "N unchanged lines" band */
+.cm-collapsedLines {
+  background: rgb(var(--bg-soft));
+  color: rgb(var(--gray-500));
+  border-top: 1px solid rgb(var(--border));
+  border-bottom: 1px solid rgb(var(--border));
+}
+.cm-collapsedLines:hover {
+  background: rgb(var(--bg-softer));
+  color: rgb(var(--gray-300));
+}
+
+/* Revert gutter between the two editors */
+.cm-merge-revert {
+  background: rgb(var(--bg));
+  border-left: 1px solid rgb(var(--border));
+  border-right: 1px solid rgb(var(--border));
+}
+.cm-merge-revert button {
+  color: rgb(var(--gray-400));
+}
+.cm-merge-revert button:hover {
+  color: rgb(var(--gray-200));
+}
+.cm-mergeSpacer {
+  background: rgb(var(--bg));
+}
+
 /* Chrome-style workspace tabs: the active tab has flared bottom corners that
    curve out into the tab strip. The curve colour matches the active tab bg. */
 .ctab-active::before,

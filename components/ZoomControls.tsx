@@ -1,6 +1,6 @@
 "use client";
 
-import { ZoomIn, ZoomOut } from "lucide-react";
+import { Search, ZoomIn, ZoomOut } from "lucide-react";
 
 interface Props {
   size: number;
@@ -26,6 +26,12 @@ export default function ZoomControls({
     <div
       className={`inline-flex items-center overflow-hidden rounded-md border border-border bg-bg ${className}`}
     >
+      <span
+        className="flex h-6 w-6 items-center justify-center border-r border-border text-gray-500"
+        title="Zoom"
+      >
+        <Search size={12} />
+      </span>
       <button
         className={btn}
         onClick={() => setSize(Math.max(min, size - 1))}

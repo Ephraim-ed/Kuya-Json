@@ -68,6 +68,9 @@ interface DockCtx {
   setOutput: (o: DockOutput | null) => void;
   activeTab: DockTab;
   setActiveTab: (t: DockTab) => void;
+  /** Open/minimized state of the dock (persists across module switches). */
+  open: boolean;
+  setOpen: (o: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 const Ctx = createContext<DockCtx>({
@@ -79,13 +82,33 @@ const Ctx = createContext<DockCtx>({
   setOutput: () => {},
   activeTab: "console",
   setActiveTab: () => {},
+  open: false,
+  setOpen: () => {},
 });
 
 export function ConsoleProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ConsoleMessage[]>([]);
   const [output, setOutputState] = useState<DockOutput | null>(null);
   const [activeTab, setActiveTab] = useState<DockTab>("console");
+  const [open, setOpen] = useState(false);
   const idRef = useRef(0);
+
+  // Auto open/minimize: open when content first arrives, minimize when all
+  // empty. Lives here (not in DockPanel) so the state survives tool switches.
+  const prevState = useRef({ msgs: 0, hasOutput: false });
+  useEffect(() => {
+    const hasOutput = !!output;
+    const empty = messages.length === 0 && !hasOutput;
+    if (empty) {
+      setOpen(false);
+    } else if (
+      (prevState.current.msgs === 0 && messages.length > 0) ||
+      (!prevState.current.hasOutput && hasOutput)
+    ) {
+      setOpen(true);
+    }
+    prevState.current = { msgs: messages.length, hasOutput };
+  }, [messages.length, output]);
 
   const push = useCallback(
     (
@@ -130,6 +153,8 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
         setOutput,
         activeTab,
         setActiveTab,
+        open,
+        setOpen,
       }}
     >
       {children}
@@ -168,33 +193,16 @@ export function DockPanel({
 }: {
   onFocusRange?: (from: number, to: number) => void;
 }) {
-  const { messages, clear, output, setOutput, activeTab, setActiveTab } =
+  const { messages, clear, output, setOutput, activeTab, setActiveTab, open, setOpen } =
     useConsole();
-  const [open, setOpen] = useState(false);
   const [height, setHeight] = useState(120);
   const [dragging, setDragging] = useState(false);
   const start = useRef({ y: 0, h: 0 });
   const heightRef = useRef(height);
   heightRef.current = height;
   const endRef = useRef<HTMLDivElement>(null);
-  const prevState = useRef({ msgs: 0, hasOutput: false });
 
   const errors = messages.filter((m) => m.level === "error").length;
-
-  // Auto open/minimize: open when content arrives, minimize when all empty.
-  useEffect(() => {
-    const hasOutput = !!output;
-    const empty = messages.length === 0 && !hasOutput;
-    if (empty) {
-      setOpen(false);
-    } else if (
-      (prevState.current.msgs === 0 && messages.length > 0) ||
-      (!prevState.current.hasOutput && hasOutput)
-    ) {
-      setOpen(true);
-    }
-    prevState.current = { msgs: messages.length, hasOutput };
-  }, [messages.length, output]);
 
   useEffect(() => {
     const s = localStorage.getItem(HEIGHT_KEY);
@@ -233,8 +241,13 @@ export function DockPanel({
   const tabBtn = (tab: DockTab, label: string, badge?: ReactNode) => (
     <button
       onClick={() => {
-        setActiveTab(tab);
-        setOpen(true);
+        // Clicking the active tab again minimizes the dock.
+        if (activeTab === tab && open) {
+          setOpen(false);
+        } else {
+          setActiveTab(tab);
+          setOpen(true);
+        }
       }}
       className={`flex items-center gap-1.5 border-b-2 px-2 py-1 text-xs font-medium ${
         activeTab === tab
