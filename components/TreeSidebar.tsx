@@ -30,7 +30,7 @@ export default function TreeSidebar({
 }: Props) {
   const [filter, setFilter] = useState("");
   const [fontSize, setFontSize] = useState(13);
-  const [expandLevel, setExpandLevel] = useState(2);
+  const [expandLevel, setExpandLevel] = useState(1);
   const treeAreaRef = useRef<HTMLDivElement>(null);
   const parsed = useMemo(() => validate(input), [input]);
 
