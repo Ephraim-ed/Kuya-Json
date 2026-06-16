@@ -467,13 +467,13 @@ function Header({
           ))}
         </select>
 
-        <Button onClick={onOpenQuery} title="Search / query (⌘K)">
+        {/* <Button onClick={onOpenQuery} title="Search / query (⌘K)">
           <span className="hidden sm:inline">Search</span>
           <span className="sm:hidden">🔍</span>
           <kbd className="ml-1 hidden rounded bg-bg px-1 text-[10px] text-gray-500 lg:inline">
             ⌘K
           </kbd>
-        </Button>
+        </Button> */}
         <Button onClick={onOpenHelp} title="Help / intro">
           ?
         </Button>
