@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { ChevronRight } from "lucide-react";
+import GlobalSearchModal from "@/components/GlobalSearchModal";
 import InputPanel from "@/components/InputPanel";
 import TreeSidebar from "@/components/TreeSidebar";
 import Split from "@/components/Split";
@@ -56,10 +58,20 @@ export default function Page() {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [mobileTreeOpen, setMobileTreeOpen] = useState(false);
   const [queryOpen, setQueryOpen] = useState(false);
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [onboardOpen, setOnboardOpen] = useState(false);
+  const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeId, setActiveId] = useState<string>("");
   const inputEditor = useRef<JsonEditorHandle | null>(null);
+
+  useEffect(() => {
+    setTreeCollapsed(localStorage.getItem("tree:collapsed") === "1");
+  }, []);
+  const collapseTree = useCallback((v: boolean) => {
+    setTreeCollapsed(v);
+    localStorage.setItem("tree:collapsed", v ? "1" : "0");
+  }, []);
 
   const tool = TOOLS.find((t) => t.id === active)!;
   const showTree = !tool.ownInput; // Diff manages its own inputs.
@@ -82,7 +94,12 @@ export default function Page() {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const k = e.key.toLowerCase();
-      if (k === "k" || k === "f") {
+      if (k === "f" && e.shiftKey) {
+        // Search across all workspaces.
+        e.preventDefault();
+        setGlobalSearchOpen(true);
+      } else if (k === "k" || k === "f") {
+        // Search the opened document.
         e.preventDefault();
         setQueryOpen((o) => (k === "f" ? true : !o));
       } else if (k === "z" && !e.shiftKey) {
@@ -306,22 +323,41 @@ export default function Page() {
           {/* Desktop: resizable [tree | workspace]; mobile: workspace only.
               Rendered via JS breakpoint so the workspace mounts exactly once. */}
           {showTree && isDesktop ? (
-            <Split
-              direction="horizontal"
-              initial={0.2}
-              min={0.1}
-              max={0.45}
-              storageKey="sidebar"
-              first={
-                <TreeSidebar
-                  input={history.value}
-                  selectedPath={selectedPath}
-                  onSelect={onSelectPath}
-                  onOpenSubtree={openSubtree}
-                />
-              }
-              second={workspace}
-            />
+            treeCollapsed ? (
+              <div className="relative h-full">
+                {/* Minimized tree: a tag pinned to the left edge */}
+                <button
+                  onClick={() => collapseTree(false)}
+                  title="Show tree"
+                  aria-label="Show tree"
+                  className="group fixed left-0 top-1/2 z-40 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-r-xl border border-l-0 border-border bg-bg-soft text-gray-400 shadow-md transition-all duration-150 hover:w-8 hover:border-accent/60 hover:bg-bg-softer hover:text-accent"
+                >
+                  <ChevronRight
+                    size={16}
+                    className="transition-transform duration-150 group-hover:translate-x-0.5"
+                  />
+                </button>
+                <div className="h-full">{workspace}</div>
+              </div>
+            ) : (
+              <Split
+                direction="horizontal"
+                initial={0.2}
+                min={0.1}
+                max={0.45}
+                storageKey="sidebar"
+                first={
+                  <TreeSidebar
+                    input={history.value}
+                    selectedPath={selectedPath}
+                    onSelect={onSelectPath}
+                    onOpenSubtree={openSubtree}
+                    onCollapse={() => collapseTree(true)}
+                  />
+                }
+                second={workspace}
+              />
+            )
           ) : (
             <div className="h-full">{workspace}</div>
           )}
@@ -337,6 +373,22 @@ export default function Page() {
           inputEditor.current?.focusRange(from, to, { focus: false })
         }
         onSelectPath={onSelectPath}
+      />
+
+      <GlobalSearchModal
+        open={globalSearchOpen}
+        onClose={() => setGlobalSearchOpen(false)}
+        workspaces={workspaces}
+        activeId={activeId}
+        onJump={(id, from, to) => {
+          if (id !== activeId) switchWorkspace(id);
+          setGlobalSearchOpen(false);
+          // Let the workspace swap settle, then select the match.
+          setTimeout(
+            () => inputEditor.current?.focusRange(from, to, { focus: false }),
+            id !== activeId ? 80 : 0,
+          );
+        }}
       />
 
       <Onboarding open={onboardOpen} onClose={closeOnboarding} />

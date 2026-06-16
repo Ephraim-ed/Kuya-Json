@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ListChevronsUpDown, ChevronsUp, ChevronsDown } from "lucide-react";
+import { ChevronsUp, ChevronsDown, ChevronLeft } from "lucide-react";
 import TreeView from "./TreeView";
 import ZoomControls from "./ZoomControls";
 import Tooltip from "./Tooltip";
@@ -17,6 +17,8 @@ interface Props {
   selectedPath: string | null;
   onSelect: (path: string) => void;
   onOpenSubtree?: (path: string) => void;
+  /** Collapse the tree to the side (desktop). */
+  onCollapse?: () => void;
   /** Mobile drawer close button; omitted on desktop. */
   onClose?: () => void;
 }
@@ -26,6 +28,7 @@ export default function TreeSidebar({
   selectedPath,
   onSelect,
   onOpenSubtree,
+  onCollapse,
   onClose,
 }: Props) {
   const [filter, setFilter] = useState("");
@@ -60,24 +63,44 @@ export default function TreeSidebar({
   const filtering = filter.trim() !== "";
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-bg-soft">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-2 py-1.5">
-        <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+    <div className="relative flex h-full min-h-0 flex-col bg-bg-soft">
+      {/* Collapse handle anchored to the sidebar's right edge */}
+      {onCollapse && (
+        <button
+          onClick={onCollapse}
+          title="Collapse tree"
+          aria-label="Collapse tree"
+          className="absolute right-0 top-1/2 z-20 hidden h-12 w-3.5 -translate-y-1/2 items-center justify-center rounded-l-md border border-r-0 border-border bg-bg-softer text-gray-400 shadow-sm transition-colors hover:bg-accent hover:text-white lg:flex"
+        >
+          <ChevronLeft size={13} />
+        </button>
+      )}
+      <div className="flex items-center gap-2 border-b border-border px-2 py-1.5">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
           Tree
         </span>
-        <div className="ml-auto flex items-center gap-3">
+
+        <div className="ml-auto flex items-center gap-1.5">
+          {/* Depth: collapse-all · level · expand-all (one segmented control) */}
           <div
-            title="Expand the tree to this depth"
-            className={`inline-flex items-center gap-1 rounded-md border border-border bg-bg pl-1.5 ${
-              filtering ? "opacity-40" : ""
+            className={`inline-flex items-center overflow-hidden rounded-md border border-border bg-bg ${
+              filtering ? "pointer-events-none opacity-40" : ""
             }`}
           >
-            <ListChevronsUpDown size={12} className="shrink-0 text-gray-500" />
+            <Tooltip text="Collapse to top level" width={160}>
+              <button
+                onClick={() => changeLevel(1)}
+                aria-label="Collapse all"
+                className="flex h-6 w-6 items-center justify-center text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200"
+              >
+                <ChevronsUp size={13} />
+              </button>
+            </Tooltip>
             <select
               value={expandLevel}
               onChange={(e) => changeLevel(Number(e.target.value))}
-              disabled={filtering}
-              className="cursor-pointer rounded-md bg-transparent py-0.5 pr-1 text-[11px] text-gray-300 focus:outline-none"
+              title="Expand to depth"
+              className="h-6 cursor-pointer border-x border-border bg-transparent pl-1.5 pr-0.5 text-[11px] tabular-nums text-gray-300 focus:outline-none"
             >
               <option value={1}>1</option>
               <option value={2}>2</option>
@@ -86,28 +109,19 @@ export default function TreeSidebar({
               <option value={5}>5</option>
               <option value={99}>All</option>
             </select>
-          </div>
-          <div className="inline-flex items-center overflow-hidden rounded-md border border-border bg-bg">
-            <Tooltip text="Collapse all — show only top-level keys" width={200}>
-              <button
-                onClick={() => changeLevel(1)}
-                disabled={filtering}
-                className="flex h-6 w-6 items-center justify-center text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200 disabled:pointer-events-none disabled:opacity-40"
-              >
-                <ChevronsUp size={13} />
-              </button>
-            </Tooltip>
-            <Tooltip text="Expand all levels" width={160}>
+            <Tooltip text="Expand all levels" width={150}>
               <button
                 onClick={() => changeLevel(99)}
-                disabled={filtering}
-                className="flex h-6 w-6 items-center justify-center border-l border-border text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200 disabled:pointer-events-none disabled:opacity-40"
+                aria-label="Expand all"
+                className="flex h-6 w-6 items-center justify-center text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200"
               >
                 <ChevronsDown size={13} />
               </button>
             </Tooltip>
           </div>
+
           <ZoomControls size={fontSize} setSize={changeZoom} />
+
           {onClose && (
             <button
               onClick={onClose}
