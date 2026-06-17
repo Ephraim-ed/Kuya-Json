@@ -221,7 +221,6 @@ export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-2 py-1.5">
         <Button
-          variant="primary"
           onClick={anonymizeEverything}
           title="Replace every value with a fake of the same type (strings, numbers, booleans), keeping structure & types"
         >

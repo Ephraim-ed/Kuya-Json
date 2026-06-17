@@ -98,10 +98,7 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
         ]}
       />
       <Tooltip text="Pretty-print the document with the chosen indentation." width={220}>
-        <Button
-          variant="primary"
-          onClick={() => apply(() => runFormat(input, indent), "Format")}
-        >
+        <Button onClick={() => apply(() => runFormat(input, indent), "Format")}>
           Format
         </Button>
       </Tooltip>
