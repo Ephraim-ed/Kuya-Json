@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { ChevronRight, Undo2, Redo2 } from "lucide-react";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
+import InstallButton from "@/components/InstallButton";
 import InputPanel from "@/components/InputPanel";
 import TreeSidebar from "@/components/TreeSidebar";
 import Split from "@/components/Split";
@@ -482,6 +483,7 @@ function Header({
         <Button onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)">
           <Redo2 size={15} />
         </Button>
+        <InstallButton />
         <Button onClick={onOpenHelp} title="Help / intro">
           ?
         </Button>

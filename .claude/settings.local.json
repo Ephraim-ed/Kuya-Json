@@ -13,7 +13,12 @@
       "Bash(pkill -f \"next dev\" 2>/dev/null; pkill -f \"next-server\" 2>/dev/null; sleep 1 *)",
       "Bash(node -e \"const l=require\\('lucide-react'\\); console.log\\('Braces' in l, 'Search' in l, 'Wrench' in l, 'Folders' in l, 'ListTree' in l, 'Terminal' in l, 'SunMoon' in l\\)\")",
       "Bash(npm view *)",
-      "Bash(node --input-type=module -e \"import\\('@codemirror/merge'\\).then\\(m => console.log\\(Object.keys\\(m\\).join\\(', '\\)\\)\\)\")"
+      "Bash(node --input-type=module -e \"import\\('@codemirror/merge'\\).then\\(m => console.log\\(Object.keys\\(m\\).join\\(', '\\)\\)\\)\")",
+      "Bash(node -e \"require\\('sharp'\\);console.log\\('sharp ok'\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -o /dev/null -w \"page %{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(curl -s -o /dev/null -w \"manifest %{http_code}\\\\n\" http://localhost:3000/manifest.webmanifest)",
+      "Bash(curl -s -o /dev/null -w \"icon %{http_code}\\\\n\" http://localhost:3000/icon-192.png)"
     ],
     "additionalDirectories": [
       "/private/tmp"
