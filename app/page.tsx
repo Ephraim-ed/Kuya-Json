@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Undo2, Redo2 } from "lucide-react";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import InputPanel from "@/components/InputPanel";
 import TreeSidebar from "@/components/TreeSidebar";
@@ -296,7 +296,10 @@ export default function Page() {
           onSelect={setActive}
           showTreeToggle={showTree}
           onToggleTree={() => setMobileTreeOpen((o) => !o)}
-          onOpenQuery={() => setQueryOpen(true)}
+          onUndo={history.undo}
+          onRedo={history.redo}
+          canUndo={history.canUndo}
+          canRedo={history.canRedo}
           onOpenHelp={() => setOnboardOpen(true)}
         />
 
@@ -403,14 +406,20 @@ function Header({
   onSelect,
   showTreeToggle,
   onToggleTree,
-  onOpenQuery,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   onOpenHelp,
 }: {
   active: ToolId;
   onSelect: (id: ToolId) => void;
   showTreeToggle: boolean;
   onToggleTree: () => void;
-  onOpenQuery: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   onOpenHelp: () => void;
 }) {
   return (
@@ -467,13 +476,12 @@ function Header({
           ))}
         </select>
 
-        {/* <Button onClick={onOpenQuery} title="Search / query (⌘K)">
-          <span className="hidden sm:inline">Search</span>
-          <span className="sm:hidden">🔍</span>
-          <kbd className="ml-1 hidden rounded bg-bg px-1 text-[10px] text-gray-500 lg:inline">
-            ⌘K
-          </kbd>
-        </Button> */}
+        <Button onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)">
+          <Undo2 size={15} />
+        </Button>
+        <Button onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)">
+          <Redo2 size={15} />
+        </Button>
         <Button onClick={onOpenHelp} title="Help / intro">
           ?
         </Button>

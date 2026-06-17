@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useRef, type ReactNode } from "react";
-import { Undo2, Redo2 } from "lucide-react";
 import { Button } from "./ui";
 import { SAMPLE_JSON } from "@/lib/sample";
 
@@ -32,7 +31,7 @@ export function DocumentActions({ className = "" }: { className?: string }) {
   const ctx = useContext(Ctx);
   const fileRef = useRef<HTMLInputElement>(null);
   if (!ctx) return null;
-  const { value, onReset, onUndo, onRedo, canUndo, canRedo } = ctx;
+  const { value, onReset } = ctx;
 
   function loadFile(file: File) {
     const reader = new FileReader();
@@ -42,12 +41,6 @@ export function DocumentActions({ className = "" }: { className?: string }) {
 
   return (
     <div className={`flex shrink-0 items-center gap-1.5 ${className}`}>
-      <Button onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)">
-        <Undo2 size={15} />
-      </Button>
-      <Button onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)">
-        <Redo2 size={15} />
-      </Button>
       <Button onClick={() => fileRef.current?.click()} title="Load a .json file">
         Load
       </Button>
