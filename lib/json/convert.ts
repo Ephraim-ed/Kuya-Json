@@ -6,6 +6,7 @@ import {
   InputData,
   jsonInputForTargetLanguage,
 } from "quicktype-core";
+import { stripComments } from "./comments";
 
 export type CodeTarget =
   | "typescript"
@@ -105,7 +106,7 @@ export async function convert(
   jsonText: string,
   target: ConvertTarget,
 ): Promise<string> {
-  const value = JSON.parse(jsonText);
+  const value = JSON.parse(stripComments(jsonText));
   switch (target) {
     case "yaml":
       return toYaml(value);

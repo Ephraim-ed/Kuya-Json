@@ -7,6 +7,7 @@ import { DocumentActions } from "../DocumentActions";
 import { useConsole } from "../console";
 import { type ToolProps } from "./types";
 import { convert, toCsv, type ConvertTarget } from "@/lib/json/convert";
+import { stripComments } from "@/lib/json/comments";
 
 /** Parse CSV text into rows of cells (handles quoted fields). */
 function parseCsv(text: string): string[][] {
@@ -73,7 +74,7 @@ export default function ConvertTool({ input, editor }: ToolProps) {
     clearSource("convert");
     try {
       if (target === "csv") {
-        const text = await toCsv(JSON.parse(input), unwind);
+        const text = await toCsv(JSON.parse(stripComments(input)), unwind);
         const all = parseCsv(text);
         setOutput({
           kind: "table",

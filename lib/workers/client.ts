@@ -7,6 +7,7 @@ import { repair } from "../json/repair";
 import { anonymize, ConsistentFaker, type AnonRule } from "../json/anonymize";
 import { buildTree } from "../json/tree";
 import { sortKeys, type SortOrder } from "../json/transform";
+import { stripComments } from "../json/comments";
 
 let worker: Worker | null = null;
 let nextId = 1;
@@ -68,8 +69,10 @@ function run<T>(req: WithoutId<WorkerRequest>, fallback: () => T): Promise<T> {
 
 // --- typed wrappers --------------------------------------------------------
 
-export function runFormat(text: string, indent: IndentStyle) {
-  return run<string>({ op: "format", text, indent }, () => format(text, indent));
+export function runFormat(text: string, indent: IndentStyle, keepComments = false) {
+  return run<string>({ op: "format", text, indent, keepComments }, () =>
+    format(text, indent, { keepComments }),
+  );
 }
 
 export function runMinify(text: string) {
@@ -85,7 +88,7 @@ export function runAnonymize(text: string, rules: AnonRule[]) {
     { op: "anonymize", text, rules },
     () => {
       const { value, count } = anonymize(
-        JSON.parse(text),
+        JSON.parse(stripComments(text)),
         rules,
         new ConsistentFaker(),
       );
@@ -95,13 +98,13 @@ export function runAnonymize(text: string, rules: AnonRule[]) {
 }
 
 export function runTree(text: string) {
-  return run({ op: "tree", text }, () => buildTree(JSON.parse(text)));
+  return run({ op: "tree", text }, () => buildTree(JSON.parse(stripComments(text))));
 }
 
 export function runSort(text: string, order: SortOrder, indent: IndentStyle) {
   return run<string>({ op: "sort", text, order, indent }, () =>
     JSON.stringify(
-      sortKeys(JSON.parse(text), order),
+      sortKeys(JSON.parse(stripComments(text)), order),
       null,
       indent === "tab" ? "\t" : Number(indent),
     ),

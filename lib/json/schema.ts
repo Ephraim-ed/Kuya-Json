@@ -5,6 +5,7 @@ import {
   InputData,
   jsonInputForTargetLanguage,
 } from "quicktype-core";
+import { stripComments } from "./comments";
 
 export interface SchemaValidationResult {
   ok: boolean;
@@ -22,12 +23,12 @@ export function validateAgainstSchema(
   let schema: object;
   let data: unknown;
   try {
-    schema = JSON.parse(schemaText);
+    schema = JSON.parse(stripComments(schemaText));
   } catch {
     return { ok: false, valid: false, errors: [], fatal: "Schema is not valid JSON." };
   }
   try {
-    data = JSON.parse(dataText);
+    data = JSON.parse(stripComments(dataText));
   } catch {
     return { ok: false, valid: false, errors: [], fatal: "Document is not valid JSON." };
   }

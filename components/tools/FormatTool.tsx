@@ -18,6 +18,7 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
   const [autoValidate, setAutoValidate] = useState(true);
   const [autoRepair, setAutoRepair] = useState(false);
   const [autoUnescape, setAutoUnescape] = useState(false);
+  const [keepComments, setKeepComments] = useState(false);
   const toast = useToast();
   const { push } = useConsole();
 
@@ -70,7 +71,7 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
       const v = validate(text);
       if (v.ok) {
         try {
-          text = format(text, indent);
+          text = format(text, indent, { keepComments });
         } catch {
           /* leave as-is */
         }
@@ -83,7 +84,7 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
     }, 700);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [input, autoUnescape, autoRepair, indent]);
+  }, [input, autoUnescape, autoRepair, indent, keepComments]);
 
   const controls = (
     <div className="flex flex-wrap items-center gap-2 border-b border-border px-2 py-1.5">
@@ -98,7 +99,7 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
         ]}
       />
       <Tooltip text="Pretty-print the document with the chosen indentation." width={220}>
-        <Button onClick={() => apply(() => runFormat(input, indent), "Format")}>
+        <Button onClick={() => apply(() => runFormat(input, indent, keepComments), "Format")}>
           Format
         </Button>
       </Tooltip>
@@ -121,6 +122,9 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
       </Tooltip>
       <Tooltip text="Automatically unwrap stringified / escaped JSON, including nested values." width={260}>
         <Switch label="Unescape" checked={autoUnescape} onChange={setAutoUnescape} />
+      </Tooltip>
+      <Tooltip text="Keep -- line comments when formatting instead of stripping them." width={260}>
+        <Switch label="Comments" checked={keepComments} onChange={setKeepComments} />
       </Tooltip>
 
       <DocumentActions className="ml-auto" />

@@ -1,3 +1,5 @@
+import { stripComments } from "./comments";
+
 export interface JsonError {
   /** Human-readable explanation. */
   message: string;
@@ -108,7 +110,7 @@ export function validate(text: string): ValidateResult {
     return { ok: false, error: { message: "Input is empty." } };
   }
   try {
-    return { ok: true, value: JSON.parse(text) };
+    return { ok: true, value: JSON.parse(stripComments(text)) };
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     return { ok: false, error: humanizeParseError(text, raw) };

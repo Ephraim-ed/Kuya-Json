@@ -19,7 +19,16 @@ export function locateAll(text: string): Map<string, SourceRange> {
 
   const isWs = (c: string) => c === " " || c === "\t" || c === "\n" || c === "\r";
   function skipWs() {
-    while (i < n && isWs(text[i])) i++;
+    while (i < n) {
+      if (isWs(text[i])) {
+        i++;
+      } else if (text[i] === "-" && text[i + 1] === "-") {
+        // `--` line comment: skip to end of line.
+        while (i < n && text[i] !== "\n") i++;
+      } else {
+        break;
+      }
+    }
   }
 
   function childPath(parent: string, key: string | number): string {

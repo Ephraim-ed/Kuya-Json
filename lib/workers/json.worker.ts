@@ -5,9 +5,10 @@ import { repair } from "../json/repair";
 import { anonymize, ConsistentFaker, type AnonRule } from "../json/anonymize";
 import { buildTree } from "../json/tree";
 import { sortKeys, type SortOrder } from "../json/transform";
+import { stripComments } from "../json/comments";
 
 export type WorkerRequest =
-  | { id: number; op: "format"; text: string; indent: IndentStyle }
+  | { id: number; op: "format"; text: string; indent: IndentStyle; keepComments?: boolean }
   | { id: number; op: "minify"; text: string }
   | { id: number; op: "validate"; text: string }
   | { id: number; op: "repair"; text: string; indent: number }
@@ -26,7 +27,7 @@ function indentNumber(indent: IndentStyle): number | string {
 function handle(msg: WorkerRequest): unknown {
   switch (msg.op) {
     case "format":
-      return format(msg.text, msg.indent);
+      return format(msg.text, msg.indent, { keepComments: msg.keepComments });
     case "minify":
       return minify(msg.text);
     case "validate":
@@ -34,15 +35,15 @@ function handle(msg: WorkerRequest): unknown {
     case "repair":
       return repair(msg.text, msg.indent);
     case "anonymize": {
-      const parsed = JSON.parse(msg.text);
+      const parsed = JSON.parse(stripComments(msg.text));
       const { value, count } = anonymize(parsed, msg.rules, new ConsistentFaker());
       return { text: JSON.stringify(value, null, 2), count };
     }
     case "tree":
-      return buildTree(JSON.parse(msg.text));
+      return buildTree(JSON.parse(stripComments(msg.text)));
     case "sort":
       return JSON.stringify(
-        sortKeys(JSON.parse(msg.text), msg.order),
+        sortKeys(JSON.parse(stripComments(msg.text)), msg.order),
         null,
         indentNumber(msg.indent),
       );

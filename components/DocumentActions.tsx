@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useRef, type ReactNode } from "react";
 import { Button } from "./ui";
-import { SAMPLE_JSON } from "@/lib/sample";
 
 interface DocActionsValue {
   value: string;
@@ -25,13 +24,13 @@ export function DocumentActionsProvider({
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-/** The shared document actions (undo/redo, load, sample, clear). Rendered at the
+/** The shared document actions (load a file). Rendered at the
  *  right of each tool's control row. */
 export function DocumentActions({ className = "" }: { className?: string }) {
   const ctx = useContext(Ctx);
   const fileRef = useRef<HTMLInputElement>(null);
   if (!ctx) return null;
-  const { value, onReset } = ctx;
+  const { onReset } = ctx;
 
   function loadFile(file: File) {
     const reader = new FileReader();
@@ -43,17 +42,6 @@ export function DocumentActions({ className = "" }: { className?: string }) {
     <div className={`flex shrink-0 items-center gap-1.5 ${className}`}>
       <Button onClick={() => fileRef.current?.click()} title="Load a .json file">
         Load
-      </Button>
-      <Button onClick={() => onReset(SAMPLE_JSON)} title="Insert sample JSON">
-        Sample
-      </Button>
-      <Button
-        variant="danger"
-        onClick={() => onReset("")}
-        disabled={!value}
-        title="Clear"
-      >
-        Clear
       </Button>
       <input
         ref={fileRef}

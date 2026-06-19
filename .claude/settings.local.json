@@ -20,7 +20,9 @@
       "Bash(curl -s -o /dev/null -w \"manifest %{http_code}\\\\n\" http://localhost:3000/manifest.webmanifest)",
       "Bash(curl -s -o /dev/null -w \"icon %{http_code}\\\\n\" http://localhost:3000/icon-192.png)",
       "Bash(echo \"exit $?\")",
-      "Bash(node -e \"const l=require\\('lucide-react'\\); ['ChevronDown','Pin','PinOff','X','Braces'].forEach\\(n=>console.log\\(n, !!l[n]\\)\\)\")"
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['ChevronDown','Pin','PinOff','X','Braces'].forEach\\(n=>console.log\\(n, !!l[n]\\)\\)\")",
+      "Bash(npx tsx -e ' *)",
+      "Bash(echo \"tsc exit $?\")"
     ],
     "additionalDirectories": [
       "/private/tmp"
