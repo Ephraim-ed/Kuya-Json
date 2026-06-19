@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ToolFrame from "./ToolFrame";
 import Tooltip from "../Tooltip";
 import { Button, Select, Switch, useToast } from "../ui";
@@ -9,9 +9,20 @@ import { DocumentActions } from "../DocumentActions";
 import { type ToolProps } from "./types";
 import { runFormat, runMinify, runSort } from "@/lib/workers/client";
 import { format, type IndentStyle } from "@/lib/json/format";
+import { hasComments } from "@/lib/json/comments";
 import { validate } from "@/lib/json/validate";
 import { repair } from "@/lib/json/repair";
 import { unescapeJson } from "@/lib/json/unescape";
+
+const SETTINGS_KEY = "kuya-json:format-settings";
+
+interface FormatSettings {
+  indent: IndentStyle;
+  autoValidate: boolean;
+  autoRepair: boolean;
+  autoUnescape: boolean;
+  keepComments: boolean;
+}
 
 export default function FormatTool({ input, setInput, editor }: ToolProps) {
   const [indent, setIndent] = useState<IndentStyle>("2");
@@ -19,8 +30,44 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
   const [autoRepair, setAutoRepair] = useState(false);
   const [autoUnescape, setAutoUnescape] = useState(false);
   const [keepComments, setKeepComments] = useState(false);
+  const settingsLoaded = useRef(false);
   const toast = useToast();
   const { push } = useConsole();
+
+  // Restore the toggle settings (shared across all workspaces) once on mount.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        const s = JSON.parse(raw) as Partial<FormatSettings>;
+        if (s.indent) setIndent(s.indent);
+        if (typeof s.autoValidate === "boolean") setAutoValidate(s.autoValidate);
+        if (typeof s.autoRepair === "boolean") setAutoRepair(s.autoRepair);
+        if (typeof s.autoUnescape === "boolean") setAutoUnescape(s.autoUnescape);
+        if (typeof s.keepComments === "boolean") setKeepComments(s.keepComments);
+      }
+    } catch {
+      /* ignore malformed / unavailable storage */
+    }
+    settingsLoaded.current = true;
+  }, []);
+
+  // Persist the settings whenever they change (after the initial load).
+  useEffect(() => {
+    if (!settingsLoaded.current) return;
+    const s: FormatSettings = {
+      indent,
+      autoValidate,
+      autoRepair,
+      autoUnescape,
+      keepComments,
+    };
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    } catch {
+      /* ignore */
+    }
+  }, [indent, autoValidate, autoRepair, autoUnescape, keepComments]);
 
   async function apply(run: () => Promise<string>, label: string) {
     try {
@@ -34,8 +81,11 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
   }
 
   // Auto-apply Unescape / Repair (debounced) while their toggles are on.
+  // Comments are off-limits: if any `--` comment is present, leave the document
+  // untouched so Validate / Repair / Unescape never mangle or strip it.
   useEffect(() => {
     if (!autoUnescape && !autoRepair) return;
+    if (hasComments(input)) return;
     const id = window.setTimeout(() => {
       let text = input;
       const applied: string[] = [];
