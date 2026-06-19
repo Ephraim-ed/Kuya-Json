@@ -30,6 +30,7 @@ interface Props {
   onAddWorkspace: () => void;
   onCloseWorkspace: (id: string) => void;
   onRenameWorkspace: (id: string, name: string) => void;
+  onTogglePinWorkspace: (id: string) => void;
 }
 
 /**
@@ -51,6 +52,7 @@ export default function InputPanel({
   onAddWorkspace,
   onCloseWorkspace,
   onRenameWorkspace,
+  onTogglePinWorkspace,
 }: Props) {
   const [dragging, setDragging] = useState(false);
   const [fontSize, setFontSize] = useState(13);
@@ -117,6 +119,7 @@ export default function InputPanel({
           onAdd={onAddWorkspace}
           onClose={onCloseWorkspace}
           onRename={onRenameWorkspace}
+          onTogglePin={onTogglePinWorkspace}
         />
       </div>
 

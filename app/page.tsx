@@ -250,6 +250,12 @@ export default function Page() {
     setWorkspaces((ws) => ws.map((w) => (w.id === id ? { ...w, name } : w)));
   }, []);
 
+  const togglePinWorkspace = useCallback((id: string) => {
+    setWorkspaces((ws) =>
+      ws.map((w) => (w.id === id ? { ...w, pinned: !w.pinned } : w)),
+    );
+  }, []);
+
   // The single shared document editor (with tabs + console), reused by tools.
   const documentEditor = (
     <InputPanel
@@ -266,6 +272,7 @@ export default function Page() {
       onAddWorkspace={addWorkspace}
       onCloseWorkspace={closeWorkspace}
       onRenameWorkspace={renameWorkspace}
+      onTogglePinWorkspace={togglePinWorkspace}
     />
   );
 

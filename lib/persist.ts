@@ -4,6 +4,7 @@ export interface Workspace {
   id: string;
   name: string;
   content: string;
+  pinned?: boolean;
 }
 
 export interface PersistState {
