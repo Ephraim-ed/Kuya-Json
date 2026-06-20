@@ -2,6 +2,8 @@
 
 import { type ReactNode } from "react";
 import Split from "../Split";
+import FloatingToolbar from "../FloatingToolbar";
+import { useZen } from "../zen";
 
 interface Props {
   /** Top control bar (buttons, selects, inline messages). */
@@ -25,9 +27,10 @@ export default function ToolFrame({
   splitKey,
   direction = "vertical",
 }: Props) {
+  const zen = useZen();
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {controls}
+      {!zen && <div data-tour="toolbar">{controls}</div>}
       <div className="min-h-0 flex-1">
         {results ? (
           <Split
@@ -41,6 +44,7 @@ export default function ToolFrame({
           editor
         )}
       </div>
+      {zen && <FloatingToolbar>{controls}</FloatingToolbar>}
     </div>
   );
 }

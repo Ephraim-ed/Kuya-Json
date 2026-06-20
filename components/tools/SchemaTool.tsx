@@ -5,7 +5,6 @@ import ToolFrame from "./ToolFrame";
 import JsonEditor from "../JsonEditor";
 import { Button } from "../ui";
 import { useConsole } from "../console";
-import { DocumentActions } from "../DocumentActions";
 import { type ToolProps } from "./types";
 import { generateSchema, validateAgainstSchema } from "@/lib/json/schema";
 
@@ -72,7 +71,6 @@ export default function SchemaTool({ input, editor }: ToolProps) {
           Validate
         </Button>
       )}
-      <DocumentActions className="ml-auto" />
     </div>
   );
 

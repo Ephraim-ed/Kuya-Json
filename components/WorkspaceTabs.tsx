@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Pin, PinOff, X, Braces, Folder as FolderIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Pin, PinOff, X, Braces, Folder as FolderIcon, FolderPlus, Layers } from "lucide-react";
 import type { Workspace, Folder } from "@/lib/persist";
 
 interface Props {
@@ -18,6 +18,8 @@ interface Props {
   folders?: Folder[];
   onGroupTabs?: (dragId: string, targetId: string) => void;
   onMoveToFolder?: (id: string, folderId: string | null) => void;
+  onAddFolder?: () => void;
+  onDeleteFolder?: (id: string) => void;
   onRenameFolder?: (id: string, name: string) => void;
   onToggleFolder?: (id: string) => void;
 }
@@ -34,6 +36,8 @@ export default function WorkspaceTabs({
   folders = [],
   onGroupTabs,
   onMoveToFolder,
+  onAddFolder,
+  onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
 }: Props) {
@@ -225,14 +229,23 @@ export default function WorkspaceTabs({
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-soft">
         <div className="flex items-center gap-2 border-b border-border px-2 py-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <Layers size={13} />
             Workspaces
           </span>
+          <button
+            onClick={() => onAddFolder?.()}
+            title="New folder"
+            aria-label="New folder"
+            className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-bg-softer hover:text-gray-200"
+          >
+            <FolderPlus size={14} />
+          </button>
           <button
             onClick={() => onAdd()}
             title="New workspace"
             aria-label="New workspace"
-            className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-base text-gray-400 hover:bg-bg-softer hover:text-gray-200"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-base text-gray-400 hover:bg-bg-softer hover:text-gray-200"
           >
             +
           </button>
@@ -277,7 +290,12 @@ export default function WorkspaceTabs({
                   }`}
                 >
                   {f.collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                  <FolderIcon size={12} className="shrink-0 text-amber-500" />
+                  <span className="relative flex shrink-0 items-center justify-center text-amber-500">
+                    <FolderIcon size={17} className="fill-current" />
+                    <span className="absolute top-[4px] text-[8px] font-bold leading-none text-white">
+                      {members.length}
+                    </span>
+                  </span>
                   {editingFolderId === f.id ? (
                     <input
                       ref={folderInputRef}
@@ -297,6 +315,16 @@ export default function WorkspaceTabs({
                   <span className="text-[10px] tabular-nums text-gray-500">
                     {members.length}
                   </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteFolder?.(f.id);
+                    }}
+                    title="Delete folder (keeps its tabs)"
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-gray-500 opacity-0 hover:bg-bg hover:text-red-300 group-hover:opacity-100"
+                  >
+                    <X size={12} />
+                  </button>
                 </div>
                 {!f.collapsed && members.map((w) => tabRow(w, true))}
               </div>

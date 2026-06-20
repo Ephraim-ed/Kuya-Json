@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronsUp, ChevronsDown, ChevronLeft } from "lucide-react";
+import { ChevronsUp, ChevronsDown, ChevronLeft, ListTree } from "lucide-react";
 import TreeView from "./TreeView";
 import ZoomControls from "./ZoomControls";
 import Tooltip from "./Tooltip";
@@ -76,7 +76,8 @@ export default function TreeSidebar({
         </button>
       )}
       <div className="flex items-center gap-2 border-b border-border px-2 py-1.5">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+        <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <ListTree size={13} />
           Tree
         </span>
 

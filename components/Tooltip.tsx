@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useZen } from "./zen";
 
 /** Wraps any element and shows a portalled tooltip on hover/focus. Portalled to
  *  <body> so it is never clipped by overflow-hidden ancestors. */
@@ -17,6 +18,7 @@ export default function Tooltip({
   const [show, setShow] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const zen = useZen();
 
   useLayoutEffect(() => {
     if (!show || !ref.current) return;
@@ -27,6 +29,9 @@ export default function Tooltip({
     );
     setPos({ top: r.bottom + 6, left });
   }, [show, width]);
+
+  // Zen mode: render the element without any tooltip behavior.
+  if (zen) return <span className="inline-flex">{children}</span>;
 
   return (
     <span

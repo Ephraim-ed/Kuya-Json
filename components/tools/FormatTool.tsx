@@ -5,7 +5,6 @@ import ToolFrame from "./ToolFrame";
 import Tooltip from "../Tooltip";
 import { Button, Select, Switch, useToast } from "../ui";
 import { useConsole } from "../console";
-import { DocumentActions } from "../DocumentActions";
 import { SidebarToggleButton } from "../SidebarToggle";
 import { type ToolProps } from "./types";
 import { runMinify, runSort } from "@/lib/workers/client";
@@ -176,8 +175,6 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
       <Tooltip text="Automatically unwrap stringified / escaped JSON, including nested values." width={260}>
         <Switch label="Unescape" checked={autoUnescape} onChange={setAutoUnescape} />
       </Tooltip>
-
-      <DocumentActions className="ml-auto" />
     </div>
   );
 

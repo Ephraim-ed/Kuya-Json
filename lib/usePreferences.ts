@@ -8,13 +8,16 @@ export interface Preferences {
   verticalTabs: boolean;
   /** When vertical tabs are on, stack tabs (top) and tree (bottom) instead of a switcher. */
   sidebarSplit: boolean;
+  /** Zen mode: hide header tool labels (icons only) and suppress tooltips. */
+  zenMode: boolean;
 }
 
 const KEY = "kuya-json:preferences";
 
 const DEFAULTS: Preferences = {
-  verticalTabs: false,
+  verticalTabs: true,
   sidebarSplit: false,
+  zenMode: false,
 };
 
 export function usePreferences() {

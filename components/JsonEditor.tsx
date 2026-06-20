@@ -12,6 +12,7 @@ import { json } from "@codemirror/lang-json";
 import {
   EditorView,
   keymap,
+  lineNumbers,
   Decoration,
   ViewPlugin,
   type Command,
@@ -21,11 +22,15 @@ import {
 import {
   EditorSelection,
   RangeSetBuilder,
+  Prec,
   type ChangeSpec,
 } from "@codemirror/state";
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
+import { HighlightStyle, syntaxHighlighting, foldGutter } from "@codemirror/language";
+import { tags as t } from "@lezer/highlight";
 import { githubDark, githubLight } from "@uiw/codemirror-theme-github";
 import { useTheme } from "./theme";
+import { useZen } from "./zen";
 import { COMMENT_PREFIX } from "@/lib/json/comments";
 
 export interface EditorMarker {
@@ -56,6 +61,101 @@ interface Props {
 }
 
 const wrap = EditorView.lineWrapping;
+
+// Match the gutter background to the editor (no lighter gutter), keep a subtle
+// divider, and lighten the line-number text.
+const gutterTheme = EditorView.theme({
+  ".cm-gutters": {
+    backgroundColor: "transparent",
+    borderRight: "1px solid rgba(128,128,128,0.25)",
+  },
+  ".cm-lineNumbers .cm-gutterElement": {
+    color: "rgba(148,163,184,0.85)",
+    cursor: "pointer",
+    paddingRight: "2px",
+  },
+  // Fold chevrons sized to fill the line height (as tall as the numbers),
+  // vertically centered, and snug against the row numbers.
+  ".cm-foldGutter .cm-gutterElement": {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0 2px",
+    fontSize: "1.25em",
+    lineHeight: "1",
+    cursor: "pointer",
+    color: "rgba(148,163,184,0.45)",
+  },
+  ".cm-foldGutter .cm-gutterElement:hover": {
+    color: "rgba(148,163,184,0.85)",
+  },
+});
+
+// A lucide-style chevron as an SVG node for the fold gutter markers.
+function chevronMarker(open: boolean): HTMLElement {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2.5");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.style.width = "0.95em";
+  svg.style.height = "0.95em";
+  svg.style.display = "block";
+  const poly = document.createElementNS(ns, "polyline");
+  // ChevronDown when open (expanded), ChevronRight when folded.
+  poly.setAttribute("points", open ? "6 9 12 15 18 9" : "9 18 15 12 9 6");
+  svg.appendChild(poly);
+  return svg as unknown as HTMLElement;
+}
+
+const foldChevrons = foldGutter({ markerDOM: chevronMarker });
+
+// Clicking a line number selects (highlights) that whole row.
+const clickableLineNumbers = lineNumbers({
+  domEventHandlers: {
+    mousedown(view, block) {
+      const line = view.state.doc.lineAt(block.from);
+      view.dispatch({ selection: EditorSelection.range(line.from, line.to) });
+      view.focus();
+      return true;
+    },
+  },
+});
+
+// Zen mode editor styling: a sans-serif font with keys in a lighter gray and
+// values in a darker gray (two grays only).
+const zenFontTheme = EditorView.theme({
+  "&": {
+    fontFamily:
+      'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  },
+  ".cm-content": {
+    fontFamily:
+      'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  },
+});
+
+const zenHighlightStyle = HighlightStyle.define([
+  { tag: t.propertyName, color: "#7d8590" }, // keys — lighter gray (a touch darker)
+  {
+    tag: [t.string, t.number, t.bool, t.null, t.keyword],
+    color: "#aab1bb", // values — lighter gray
+  },
+]);
+
+// In zen mode, `--` comments are shown in green instead of the subtle gray.
+const zenCommentTheme = EditorView.theme({
+  ".cm-jsonc-comment": { color: "#22c55e !important" },
+});
+
+const zenEditorExtensions = [
+  Prec.highest(zenFontTheme),
+  Prec.highest(syntaxHighlighting(zenHighlightStyle)),
+  Prec.highest(zenCommentTheme),
+];
 
 const COMMENT_RE = new RegExp(`^(\\s*)${COMMENT_PREFIX}\\s?`);
 
@@ -188,6 +288,7 @@ const JsonEditor = forwardRef<JsonEditorHandle, Props>(function JsonEditor(
 ) {
   const ref = useRef<ReactCodeMirrorRef>(null);
   const { theme } = useTheme();
+  const zen = useZen();
   const onUserSelectRef = useRef(onUserSelect);
   onUserSelectRef.current = onUserSelect;
 
@@ -209,6 +310,7 @@ const JsonEditor = forwardRef<JsonEditorHandle, Props>(function JsonEditor(
   const extensions = useMemo(() => {
     const ext = [
       wrap,
+      clickableLineNumbers,
       commentKeymap,
       EditorView.updateListener.of((u) => {
         if (
@@ -220,10 +322,22 @@ const JsonEditor = forwardRef<JsonEditorHandle, Props>(function JsonEditor(
       }),
     ];
     if (language === "json") {
-      ext.push(json(), lintGutter(), commentHighlighter, commentTheme);
+      // foldGutter added here (after the line numbers) so the fold chevrons
+      // sit to the right of the row numbers.
+      // foldGutter right after the line numbers (before lintGutter) so the
+      // chevrons sit directly beside the row numbers.
+      ext.push(
+        json(),
+        foldChevrons,
+        lintGutter(),
+        commentHighlighter,
+        commentTheme,
+        gutterTheme,
+      );
+      if (zen) ext.push(...zenEditorExtensions);
     }
     return ext;
-  }, [language]);
+  }, [language, zen]);
 
   // Re-apply diagnostics whenever markers change.
   useEffect(() => {
@@ -249,9 +363,9 @@ const JsonEditor = forwardRef<JsonEditorHandle, Props>(function JsonEditor(
       placeholder={placeholder}
       extensions={extensions}
       basicSetup={{
-        lineNumbers: true,
+        lineNumbers: false, // provided by clickableLineNumbers instead
         highlightActiveLine: !readOnly,
-        foldGutter: true,
+        foldGutter: false, // provided explicitly (right of the line numbers)
         autocompletion: false,
         highlightActiveLineGutter: !readOnly,
         searchKeymap: false, // Cmd/Ctrl+F opens our unified Find modal instead

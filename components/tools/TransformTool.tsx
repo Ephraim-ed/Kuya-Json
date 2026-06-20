@@ -3,7 +3,6 @@
 import { useState } from "react";
 import ToolFrame from "./ToolFrame";
 import { Button, Select } from "../ui";
-import { DocumentActions } from "../DocumentActions";
 import { useConsole } from "../console";
 import { type ToolProps } from "./types";
 import { validate } from "@/lib/json/validate";
@@ -93,7 +92,6 @@ export default function TransformTool({ input, setInput, editor }: ToolProps) {
         <Button variant="primary" onClick={run}>
           Run
         </Button>
-        <DocumentActions className="ml-auto" />
       </div>
       {showMerge && (
         <textarea

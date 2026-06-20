@@ -5,7 +5,6 @@ import Split from "../Split";
 import { VenetianMask, Info, ShieldCheck } from "lucide-react";
 import { Banner, Button, Select } from "../ui";
 import Tooltip from "../Tooltip";
-import { DocumentActions } from "../DocumentActions";
 import { useConsole } from "../console";
 import { type ToolProps } from "./types";
 import { runAnonymize } from "@/lib/workers/client";
@@ -230,7 +229,6 @@ export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
         {count != null && (
           <span className="text-xs text-gray-500">{count} values replaced (applied to document)</span>
         )}
-        <DocumentActions className="ml-auto" />
       </div>
       <div className="min-h-0 flex-1">
         <Split

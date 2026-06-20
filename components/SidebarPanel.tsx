@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Columns2, Rows2 } from "lucide-react";
+import { Columns2, Rows2, Layers, ListTree } from "lucide-react";
 import Split from "./Split";
 import WorkspaceTabs from "./WorkspaceTabs";
 import TreeSidebar from "./TreeSidebar";
@@ -20,6 +20,8 @@ interface Props {
   onTogglePinWorkspace: (id: string) => void;
   onGroupTabs: (dragId: string, targetId: string) => void;
   onMoveToFolder: (id: string, folderId: string | null) => void;
+  onAddFolder: () => void;
+  onDeleteFolder: (id: string) => void;
   onRenameFolder: (id: string, name: string) => void;
   onToggleFolder: (id: string) => void;
   // Tree props
@@ -48,6 +50,8 @@ export default function SidebarPanel({
   onTogglePinWorkspace,
   onGroupTabs,
   onMoveToFolder,
+  onAddFolder,
+  onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
   input,
@@ -72,6 +76,8 @@ export default function SidebarPanel({
       onTogglePin={onTogglePinWorkspace}
       onGroupTabs={onGroupTabs}
       onMoveToFolder={onMoveToFolder}
+      onAddFolder={onAddFolder}
+      onDeleteFolder={onDeleteFolder}
       onRenameFolder={onRenameFolder}
       onToggleFolder={onToggleFolder}
     />
@@ -103,7 +109,7 @@ export default function SidebarPanel({
   // Split mode: two stacked panes with a draggable divider.
   if (split) {
     return (
-      <div className="relative flex h-full min-h-0 flex-col bg-bg-soft">
+      <div data-tour="sidebar" className="relative flex h-full min-h-0 flex-col bg-bg-soft">
         <div className="flex items-center justify-end gap-1.5 border-b border-border px-2 py-1.5">
           {splitButton}
         </div>
@@ -124,18 +130,19 @@ export default function SidebarPanel({
 
   // Tabbed mode: a Chrome-style [Workspaces | Tree] tab strip.
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-bg-soft">
+    <div data-tour="sidebar" className="relative flex h-full min-h-0 flex-col bg-bg-soft">
       <div className="flex items-end gap-1 border-b border-border bg-bg px-1.5 pt-1.5">
         {(["workspaces", "tree"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex h-7 items-center rounded-t-lg px-3 text-xs font-medium capitalize transition-colors ${
+            className={`flex h-7 items-center gap-1.5 rounded-t-lg px-3 text-xs font-medium capitalize transition-colors ${
               tab === t
                 ? "ctab-active z-10 -mb-px bg-bg-soft text-gray-100"
                 : "bg-transparent text-gray-400 hover:bg-bg-soft hover:text-gray-200"
             }`}
           >
+            {t === "workspaces" ? <Layers size={13} /> : <ListTree size={13} />}
             {t}
           </button>
         ))}

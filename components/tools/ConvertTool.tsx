@@ -3,7 +3,6 @@
 import { useState } from "react";
 import ToolFrame from "./ToolFrame";
 import { Button, Select } from "../ui";
-import { DocumentActions } from "../DocumentActions";
 import { useConsole } from "../console";
 import { type ToolProps } from "./types";
 import { convert, toCsv, type ConvertTarget } from "@/lib/json/convert";
@@ -127,7 +126,6 @@ export default function ConvertTool({ input, editor }: ToolProps) {
           Split arrays into rows
         </label>
       )}
-      <DocumentActions className="ml-auto" />
     </div>
   );
 

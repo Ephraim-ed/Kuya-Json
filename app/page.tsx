@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import dynamic from "next/dynamic";
-import { ChevronRight, Undo2, Redo2 } from "lucide-react";
+import { Undo2, Redo2 } from "lucide-react";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import InstallButton from "@/components/InstallButton";
 import InputPanel from "@/components/InputPanel";
@@ -22,8 +22,8 @@ import QueryModal from "@/components/QueryModal";
 import { ConsoleProvider } from "@/components/console";
 import { DocumentActionsProvider } from "@/components/DocumentActions";
 import { SidebarToggleProvider } from "@/components/SidebarToggle";
-import { useTheme } from "@/components/theme";
-import Onboarding from "@/components/Onboarding";
+import { ZenContext } from "@/components/zen";
+import Tour from "@/components/Tour";
 import { Button, ToastProvider } from "@/components/ui";
 import type { JsonEditorHandle } from "@/components/JsonEditor";
 import { TOOLS } from "@/components/tools/registry";
@@ -293,25 +293,29 @@ export default function Page() {
             : w,
       );
       setWorkspaces(next);
-      setFolders((fs) => {
-        const withNew = newFolder ? [...fs, newFolder] : fs;
-        return withNew.filter((f) => next.some((w) => w.folderId === f.id));
-      });
+      if (newFolder) setFolders((fs) => [...fs, newFolder!]);
     },
     [workspaces],
   );
 
   // Move a tab into a folder, or out of any folder (folderId = null).
-  const moveToFolder = useCallback(
-    (id: string, folderId: string | null) => {
-      const next = workspaces.map((w) =>
-        w.id === id ? { ...w, folderId: folderId ?? undefined } : w,
-      );
-      setWorkspaces(next);
-      setFolders((fs) => fs.filter((f) => next.some((w) => w.folderId === f.id)));
-    },
-    [workspaces],
-  );
+  const moveToFolder = useCallback((id: string, folderId: string | null) => {
+    setWorkspaces((ws) =>
+      ws.map((w) => (w.id === id ? { ...w, folderId: folderId ?? undefined } : w)),
+    );
+  }, []);
+
+  const addFolder = useCallback(() => {
+    setFolders((fs) => [...fs, { id: uuid(), name: "New folder", collapsed: false }]);
+  }, []);
+
+  // Remove a folder and ungroup its members.
+  const deleteFolder = useCallback((id: string) => {
+    setWorkspaces((ws) =>
+      ws.map((w) => (w.folderId === id ? { ...w, folderId: undefined } : w)),
+    );
+    setFolders((fs) => fs.filter((f) => f.id !== id));
+  }, []);
 
   const renameFolder = useCallback((id: string, name: string) => {
     setFolders((fs) =>
@@ -342,7 +346,7 @@ export default function Page() {
       onCloseWorkspace={closeWorkspace}
       onRenameWorkspace={renameWorkspace}
       onTogglePinWorkspace={togglePinWorkspace}
-      verticalTabs={prefs.verticalTabs && isDesktop}
+      verticalTabs={prefs.verticalTabs && isDesktop && !prefs.zenMode}
     />
   );
 
@@ -356,6 +360,7 @@ export default function Page() {
   );
 
   return (
+    <ZenContext.Provider value={prefs.zenMode}>
     <ToastProvider>
       <ConsoleProvider>
       <DocumentActionsProvider
@@ -372,26 +377,34 @@ export default function Page() {
         value={{
           collapsed: treeCollapsed,
           toggle: () => collapseTree(!treeCollapsed),
-          available: showTree && isDesktop,
+          available: showTree && isDesktop && !prefs.zenMode,
         }}
       >
-      <div className="flex h-screen flex-col">
+      <div className={`flex h-screen ${prefs.zenMode ? "flex-row" : "flex-col"}`}>
         <Header
           active={active}
           onSelect={setActive}
-          showTreeToggle={showTree}
+          showTreeToggle={showTree && !prefs.zenMode}
           onToggleTree={() => setMobileTreeOpen((o) => !o)}
           onUndo={history.undo}
           onRedo={history.redo}
           canUndo={history.canUndo}
           canRedo={history.canRedo}
           onOpenHelp={() => setOnboardOpen(true)}
-          preferences={<Preferences prefs={prefs} setPref={setPref} />}
+          preferences={
+            <Preferences
+              prefs={prefs}
+              setPref={setPref}
+              align={prefs.zenMode ? "left" : "right"}
+              bare={prefs.zenMode}
+            />
+          }
+          zenMode={prefs.zenMode}
         />
 
         <main className="relative min-h-0 flex-1 overflow-hidden">
           {/* Mobile tree drawer */}
-          {showTree && mobileTreeOpen && (
+          {showTree && mobileTreeOpen && !prefs.zenMode && (
             <>
               <div
                 className="fixed inset-0 z-30 bg-black/50 lg:hidden"
@@ -411,23 +424,10 @@ export default function Page() {
 
           {/* Desktop: resizable [tree | workspace]; mobile: workspace only.
               Rendered via JS breakpoint so the workspace mounts exactly once. */}
-          {showTree && isDesktop ? (
+          {showTree && isDesktop && !prefs.zenMode ? (
             treeCollapsed ? (
-              <div className="relative h-full">
-                {/* Minimized tree: a tag pinned to the left edge */}
-                <button
-                  onClick={() => collapseTree(false)}
-                  title={prefs.verticalTabs ? "Show sidebar" : "Show tree"}
-                  aria-label={prefs.verticalTabs ? "Show sidebar" : "Show tree"}
-                  className="group fixed left-0 top-1/2 z-40 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-r-xl border border-l-0 border-border bg-bg-soft text-gray-400 shadow-md transition-all duration-150 hover:w-8 hover:border-accent/60 hover:bg-bg-softer hover:text-accent"
-                >
-                  <ChevronRight
-                    size={16}
-                    className="transition-transform duration-150 group-hover:translate-x-0.5"
-                  />
-                </button>
-                <div className="h-full">{workspace}</div>
-              </div>
+              // Collapsed: expand via the toolbar's sidebar button.
+              <div className="h-full">{workspace}</div>
             ) : (
               <Split
                 direction="horizontal"
@@ -448,6 +448,8 @@ export default function Page() {
                       onTogglePinWorkspace={togglePinWorkspace}
                       onGroupTabs={groupTabs}
                       onMoveToFolder={moveToFolder}
+                      onAddFolder={addFolder}
+                      onDeleteFolder={deleteFolder}
                       onRenameFolder={renameFolder}
                       onToggleFolder={toggleFolder}
                       input={history.value}
@@ -503,11 +505,12 @@ export default function Page() {
         }}
       />
 
-      <Onboarding open={onboardOpen} onClose={closeOnboarding} />
+      <Tour open={onboardOpen} onClose={closeOnboarding} />
       </SidebarToggleProvider>
       </DocumentActionsProvider>
       </ConsoleProvider>
     </ToastProvider>
+    </ZenContext.Provider>
   );
 }
 
@@ -522,6 +525,7 @@ function Header({
   canRedo,
   onOpenHelp,
   preferences,
+  zenMode,
 }: {
   active: ToolId;
   onSelect: (id: ToolId) => void;
@@ -533,7 +537,50 @@ function Header({
   canRedo: boolean;
   onOpenHelp: () => void;
   preferences: ReactNode;
+  zenMode: boolean;
 }) {
+  // Zen mode: the header becomes a left sidebar (in-flow, shrinks the editor),
+  // with the {J} icon at the very top. All controls are uniform borderless icons.
+  if (zenMode) {
+    const iconBtn =
+      "flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-400";
+    return (
+      <div className="flex h-full shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-border bg-bg-soft p-1.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent font-mono text-[11px] font-bold tracking-tight text-white">
+          {"{J}"}
+        </span>
+        <div className="my-0.5 h-px w-6 bg-border" />
+        {TOOLS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => onSelect(t.id)}
+            aria-label={t.label}
+            className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+              active === t.id
+                ? "bg-accent text-white"
+                : "text-gray-400 hover:bg-bg-softer hover:text-gray-200"
+            }`}
+          >
+            <t.icon size={16} />
+          </button>
+        ))}
+        <div className="mt-auto flex flex-col items-center gap-1 pt-1">
+          <div className="my-0.5 h-px w-6 bg-border" />
+          <button onClick={onUndo} disabled={!canUndo} aria-label="Undo" className={iconBtn}>
+            <Undo2 size={15} />
+          </button>
+          <button onClick={onRedo} disabled={!canRedo} aria-label="Redo" className={iconBtn}>
+            <Redo2 size={15} />
+          </button>
+          <button onClick={onOpenHelp} aria-label="Help" className={iconBtn}>
+            ?
+          </button>
+          {preferences}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <header className="flex shrink-0 flex-col gap-2 border-b border-border bg-bg-soft px-3 py-2 sm:flex-row sm:items-center">
       <div className="flex items-center gap-2">
@@ -550,27 +597,34 @@ function Header({
         <span className="flex h-6 items-center justify-center rounded-md bg-accent px-1.5 font-mono text-sm font-bold tracking-tight text-white">
           {"{J}"}
         </span>
-        <span className="text-[15px] font-semibold tracking-tightish text-gray-100">
-          Kuya Json
-        </span>
-        <span className="hidden text-xs font-normal text-gray-500 lg:inline">
-          · built by ep
-        </span>
+        {!zenMode && (
+          <>
+            <span className="text-[15px] font-semibold tracking-tightish text-gray-100">
+              Kuya Json
+            </span>
+            <span className="hidden text-xs font-normal text-gray-500 lg:inline">
+              · built by ep
+            </span>
+          </>
+        )}
       </div>
 
       <div className="flex items-center gap-2 sm:ml-auto">
-        <nav className="hidden gap-1 overflow-x-auto sm:flex">
+        <nav data-tour="tools" className="hidden gap-1 overflow-x-auto sm:flex">
           {TOOLS.map((t) => (
             <Tooltip key={t.id} text={t.info}>
               <button
                 onClick={() => onSelect(t.id)}
-                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                aria-label={t.label}
+                data-tour={`tool-${t.id}`}
+                className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                   active === t.id
                     ? "bg-accent text-white"
                     : "text-gray-400 hover:bg-bg-softer hover:text-gray-200"
                 }`}
               >
-                {t.label}
+                <t.icon size={15} />
+                {!zenMode && t.label}
               </button>
             </Tooltip>
           ))}
@@ -599,20 +653,7 @@ function Header({
           ?
         </Button>
         {preferences}
-        <ThemeToggle />
       </div>
     </header>
-  );
-}
-
-function ThemeToggle() {
-  const { theme, toggle } = useTheme();
-  return (
-    <Button
-      onClick={toggle}
-      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-    >
-      {theme === "dark" ? "☀" : "☾"}
-    </Button>
   );
 }

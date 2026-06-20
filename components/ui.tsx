@@ -101,7 +101,7 @@ export function Select({
       title={title}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`rounded-md border border-border bg-bg-soft px-2.5 py-1.5 text-sm text-gray-300 hover:bg-bg-softer focus:outline-none focus:ring-1 focus:ring-accent ${className}`}
+      className={`cursor-pointer rounded-md border border-border bg-bg-soft px-2.5 py-1.5 text-sm text-gray-300 hover:bg-bg-softer focus:outline-none focus:ring-1 focus:ring-accent ${className}`}
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 
 export interface ToolProps {
   /** Current document text. */
@@ -20,6 +21,8 @@ export type ToolId =
 export interface ToolMeta {
   id: ToolId;
   label: string;
+  /** Lucide icon shown in the header nav. */
+  icon: LucideIcon;
   /** Short hover help describing what the tool does and how to use it. */
   info: string;
   /** Diff takes over the whole workspace (two inputs, no shared editor). */

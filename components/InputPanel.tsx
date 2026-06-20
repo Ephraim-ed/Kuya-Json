@@ -130,7 +130,7 @@ export default function InputPanel({
       )}
 
       {/* Editor */}
-      <div ref={editorAreaRef} className="relative min-h-0 flex-1">
+      <div ref={editorAreaRef} data-tour="editor" className="relative min-h-0 flex-1">
         <JsonEditor
           ref={editorRef}
           value={value}
@@ -147,7 +147,7 @@ export default function InputPanel({
             </p>
             <p className="mt-1 text-xs text-gray-500">
               Type or paste here, drop a <span className="text-gray-400">.json</span> file,
-              or hit <span className="text-gray-400">Sample</span> above.
+              or load one from <span className="text-gray-400">Settings</span>.
             </p>
           </div>
         )}

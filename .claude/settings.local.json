@@ -24,7 +24,17 @@
       "Bash(npx tsx -e ' *)",
       "Bash(echo \"tsc exit $?\")",
       "Bash(xargs -n1 basename)",
-      "Bash(node -e \"const l=require\\('lucide-react'\\); ['PanelLeftClose','PanelLeftOpen'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")"
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['PanelLeftClose','PanelLeftOpen'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['ListTree','Layers','LayoutList','FolderTree','PanelsTopLeft'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['Braces','VenetianMask','ArrowLeftRight','GitCompare','FileCheck','Wand2'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['GripVertical','SlidersHorizontal','Minus','GripHorizontal'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['Toolbox','Wrench','PackageOpen','Briefcase','Hammer','ToyBrick','Backpack'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")",
+      "Bash(node -e \"console.log\\(!!require.resolve\\('@codemirror/language'\\), !!require.resolve\\('@lezer/highlight'\\)\\)\")",
+      "Bash(grep -n \"const { theme } = useTheme\\\\|const extensions = useMemo\\\\|if \\(language === \\\\\"json\\\\\"\\)\\\\|}, \\\\[language\\\\]\" components/JsonEditor.tsx)",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['Archive','ArchiveRestore','DatabaseBackup','HardDriveDownload','HardDriveUpload'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")",
+      "Bash(npm i *)",
+      "Bash(grep -iB2 -A12 \"error\\\\|digest\")",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['FolderPlus','Trash2'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")"
     ],
     "additionalDirectories": [
       "/private/tmp"
