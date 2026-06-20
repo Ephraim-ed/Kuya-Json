@@ -6,8 +6,9 @@ import Tooltip from "../Tooltip";
 import { Button, Select, Switch, useToast } from "../ui";
 import { useConsole } from "../console";
 import { DocumentActions } from "../DocumentActions";
+import { SidebarToggleButton } from "../SidebarToggle";
 import { type ToolProps } from "./types";
-import { runFormat, runMinify, runSort } from "@/lib/workers/client";
+import { runMinify, runSort } from "@/lib/workers/client";
 import { format, type IndentStyle } from "@/lib/json/format";
 import { hasComments } from "@/lib/json/comments";
 import { validate } from "@/lib/json/validate";
@@ -19,17 +20,17 @@ const SETTINGS_KEY = "kuya-json:format-settings";
 interface FormatSettings {
   indent: IndentStyle;
   autoValidate: boolean;
+  autoFormat: boolean;
   autoRepair: boolean;
   autoUnescape: boolean;
-  keepComments: boolean;
 }
 
 export default function FormatTool({ input, setInput, editor }: ToolProps) {
   const [indent, setIndent] = useState<IndentStyle>("2");
   const [autoValidate, setAutoValidate] = useState(true);
+  const [autoFormat, setAutoFormat] = useState(true);
   const [autoRepair, setAutoRepair] = useState(false);
   const [autoUnescape, setAutoUnescape] = useState(false);
-  const [keepComments, setKeepComments] = useState(false);
   const settingsLoaded = useRef(false);
   const toast = useToast();
   const { push } = useConsole();
@@ -42,9 +43,9 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
         const s = JSON.parse(raw) as Partial<FormatSettings>;
         if (s.indent) setIndent(s.indent);
         if (typeof s.autoValidate === "boolean") setAutoValidate(s.autoValidate);
+        if (typeof s.autoFormat === "boolean") setAutoFormat(s.autoFormat);
         if (typeof s.autoRepair === "boolean") setAutoRepair(s.autoRepair);
         if (typeof s.autoUnescape === "boolean") setAutoUnescape(s.autoUnescape);
-        if (typeof s.keepComments === "boolean") setKeepComments(s.keepComments);
       }
     } catch {
       /* ignore malformed / unavailable storage */
@@ -58,16 +59,16 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
     const s: FormatSettings = {
       indent,
       autoValidate,
+      autoFormat,
       autoRepair,
       autoUnescape,
-      keepComments,
     };
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
     } catch {
       /* ignore */
     }
-  }, [indent, autoValidate, autoRepair, autoUnescape, keepComments]);
+  }, [indent, autoValidate, autoFormat, autoRepair, autoUnescape]);
 
   async function apply(run: () => Promise<string>, label: string) {
     try {
@@ -80,17 +81,17 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
     }
   }
 
-  // Auto-apply Unescape / Repair (debounced) while their toggles are on.
-  // Comments are off-limits: if any `--` comment is present, leave the document
-  // untouched so Validate / Repair / Unescape never mangle or strip it.
+  // Auto-apply Format / Unescape / Repair (debounced) while their toggles are on.
+  // Comments are off-limits to Unescape / Repair (they'd strip them); Format keeps
+  // comments, so auto-format runs even when the document has `--` comments.
   useEffect(() => {
-    if (!autoUnescape && !autoRepair) return;
-    if (hasComments(input)) return;
+    if (!autoUnescape && !autoRepair && !autoFormat) return;
     const id = window.setTimeout(() => {
       let text = input;
       const applied: string[] = [];
+      const commented = hasComments(input);
 
-      if (autoUnescape) {
+      if (autoUnescape && !commented) {
         const r = unescapeJson(text);
         if (r.changed) {
           text = r.text;
@@ -104,7 +105,7 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
           );
         }
       }
-      if (autoRepair) {
+      if (autoRepair && !commented) {
         const v = validate(text);
         if (!v.ok) {
           const r = repair(text, 2);
@@ -117,27 +118,31 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
           }
         }
       }
-      // Normalize formatting when the result is valid.
+      // Normalize formatting when valid: always if Format is on, otherwise only
+      // to tidy up after an unescape/repair.
       const v = validate(text);
-      if (v.ok) {
+      if (v.ok && (autoFormat || applied.length > 0)) {
         try {
-          text = format(text, indent, { keepComments });
+          text = format(text, indent, { keepComments: true });
         } catch {
           /* leave as-is */
         }
       }
 
-      if (applied.length > 0 && text !== input) {
+      if (text !== input) {
         setInput(text);
-        toast(`Auto-${applied.join(" & ")} ✓`, { kind: "ok" });
+        if (applied.length > 0) {
+          toast(`Auto-${applied.join(" & ")} ✓`, { kind: "ok" });
+        }
       }
     }, 700);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [input, autoUnescape, autoRepair, indent, keepComments]);
+  }, [input, autoUnescape, autoRepair, autoFormat, indent]);
 
   const controls = (
     <div className="flex flex-wrap items-center gap-2 border-b border-border px-2 py-1.5">
+      <SidebarToggleButton />
       <Select
         title="Indentation"
         value={indent}
@@ -148,11 +153,6 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
           { value: "tab", label: "Tabs" },
         ]}
       />
-      <Tooltip text="Pretty-print the document with the chosen indentation." width={220}>
-        <Button onClick={() => apply(() => runFormat(input, indent, keepComments), "Format")}>
-          Format
-        </Button>
-      </Tooltip>
       <Tooltip text="Compress to a single line (remove all whitespace)." width={220}>
         <Button onClick={() => apply(() => runMinify(input), "Minify")}>Minify</Button>
       </Tooltip>
@@ -164,6 +164,9 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
 
       <span className="mx-1 h-5 w-px bg-border" />
 
+      <Tooltip text="Continuously pretty-print the document with the chosen indentation." width={250}>
+        <Switch label="Format" checked={autoFormat} onChange={setAutoFormat} />
+      </Tooltip>
       <Tooltip text="Continuously check the document and show its validity." width={250}>
         <Switch label="Validate" checked={autoValidate} onChange={setAutoValidate} />
       </Tooltip>
@@ -172,9 +175,6 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
       </Tooltip>
       <Tooltip text="Automatically unwrap stringified / escaped JSON, including nested values." width={260}>
         <Switch label="Unescape" checked={autoUnescape} onChange={setAutoUnescape} />
-      </Tooltip>
-      <Tooltip text="Keep -- line comments when formatting instead of stripping them." width={260}>
-        <Switch label="Comments" checked={keepComments} onChange={setKeepComments} />
       </Tooltip>
 
       <DocumentActions className="ml-auto" />

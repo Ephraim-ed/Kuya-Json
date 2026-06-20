@@ -1,17 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import dynamic from "next/dynamic";
 import { ChevronRight, Undo2, Redo2 } from "lucide-react";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import InstallButton from "@/components/InstallButton";
 import InputPanel from "@/components/InputPanel";
 import TreeSidebar from "@/components/TreeSidebar";
+import SidebarPanel from "@/components/SidebarPanel";
+import Preferences from "@/components/Preferences";
 import Split from "@/components/Split";
 import Tooltip from "@/components/Tooltip";
 import QueryModal from "@/components/QueryModal";
 import { ConsoleProvider } from "@/components/console";
 import { DocumentActionsProvider } from "@/components/DocumentActions";
+import { SidebarToggleProvider } from "@/components/SidebarToggle";
 import { useTheme } from "@/components/theme";
 import Onboarding from "@/components/Onboarding";
 import { Button, ToastProvider } from "@/components/ui";
@@ -19,6 +29,7 @@ import type { JsonEditorHandle } from "@/components/JsonEditor";
 import { TOOLS } from "@/components/tools/registry";
 import type { ToolId } from "@/components/tools/types";
 import { useHistory } from "@/lib/history";
+import { usePreferences } from "@/lib/usePreferences";
 import { locateAll } from "@/lib/json/locate";
 import { validate } from "@/lib/json/validate";
 import { JSONPath } from "jsonpath-plus";
@@ -27,6 +38,7 @@ import {
   saveState,
   uuid,
   type Workspace,
+  type Folder,
 } from "@/lib/persist";
 
 const ToolHost = dynamic(() => import("@/components/ToolHost"), { ssr: false });
@@ -63,8 +75,10 @@ export default function Page() {
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [activeId, setActiveId] = useState<string>("");
   const inputEditor = useRef<JsonEditorHandle | null>(null);
+  const { prefs, setPref } = usePreferences();
 
   useEffect(() => {
     setTreeCollapsed(localStorage.getItem("tree:collapsed") === "1");
@@ -146,6 +160,7 @@ export default function Page() {
         };
       }
       setWorkspaces(state.workspaces);
+      setFolders(state.folders ?? []);
       setActiveId(state.activeId);
       if (TOOLS.some((t) => t.id === state.activeTool)) {
         setActive(state.activeTool as ToolId);
@@ -175,10 +190,10 @@ export default function Page() {
   useEffect(() => {
     if (!loaded.current || workspaces.length === 0) return;
     const id = window.setTimeout(() => {
-      saveState({ workspaces, activeId, activeTool: active });
+      saveState({ workspaces, activeId, activeTool: active, folders });
     }, 400);
     return () => window.clearTimeout(id);
-  }, [workspaces, activeId, active]);
+  }, [workspaces, activeId, active, folders]);
 
   // --- workspace actions ---
   const switchWorkspace = useCallback(
@@ -256,6 +271,60 @@ export default function Page() {
     );
   }, []);
 
+  // Drop one tab onto another → group them into a folder (or join the target's).
+  const groupTabs = useCallback(
+    (dragId: string, targetId: string) => {
+      if (dragId === targetId) return;
+      const target = workspaces.find((w) => w.id === targetId);
+      const drag = workspaces.find((w) => w.id === dragId);
+      if (!target || !drag) return;
+      if (drag.folderId && drag.folderId === target.folderId) return;
+      let folderId = target.folderId;
+      let newFolder: Folder | null = null;
+      if (!folderId) {
+        folderId = uuid();
+        newFolder = { id: folderId, name: "New folder", collapsed: false };
+      }
+      const next = workspaces.map((w) =>
+        w.id === dragId
+          ? { ...w, folderId, pinned: false }
+          : w.id === targetId
+            ? { ...w, folderId }
+            : w,
+      );
+      setWorkspaces(next);
+      setFolders((fs) => {
+        const withNew = newFolder ? [...fs, newFolder] : fs;
+        return withNew.filter((f) => next.some((w) => w.folderId === f.id));
+      });
+    },
+    [workspaces],
+  );
+
+  // Move a tab into a folder, or out of any folder (folderId = null).
+  const moveToFolder = useCallback(
+    (id: string, folderId: string | null) => {
+      const next = workspaces.map((w) =>
+        w.id === id ? { ...w, folderId: folderId ?? undefined } : w,
+      );
+      setWorkspaces(next);
+      setFolders((fs) => fs.filter((f) => next.some((w) => w.folderId === f.id)));
+    },
+    [workspaces],
+  );
+
+  const renameFolder = useCallback((id: string, name: string) => {
+    setFolders((fs) =>
+      fs.map((f) => (f.id === id ? { ...f, name: name.trim() || "Folder" } : f)),
+    );
+  }, []);
+
+  const toggleFolder = useCallback((id: string) => {
+    setFolders((fs) =>
+      fs.map((f) => (f.id === id ? { ...f, collapsed: !f.collapsed } : f)),
+    );
+  }, []);
+
   // The single shared document editor (with tabs + console), reused by tools.
   const documentEditor = (
     <InputPanel
@@ -273,6 +342,7 @@ export default function Page() {
       onCloseWorkspace={closeWorkspace}
       onRenameWorkspace={renameWorkspace}
       onTogglePinWorkspace={togglePinWorkspace}
+      verticalTabs={prefs.verticalTabs && isDesktop}
     />
   );
 
@@ -298,6 +368,13 @@ export default function Page() {
           canRedo: history.canRedo,
         }}
       >
+      <SidebarToggleProvider
+        value={{
+          collapsed: treeCollapsed,
+          toggle: () => collapseTree(!treeCollapsed),
+          available: showTree && isDesktop,
+        }}
+      >
       <div className="flex h-screen flex-col">
         <Header
           active={active}
@@ -309,6 +386,7 @@ export default function Page() {
           canUndo={history.canUndo}
           canRedo={history.canRedo}
           onOpenHelp={() => setOnboardOpen(true)}
+          preferences={<Preferences prefs={prefs} setPref={setPref} />}
         />
 
         <main className="relative min-h-0 flex-1 overflow-hidden">
@@ -339,8 +417,8 @@ export default function Page() {
                 {/* Minimized tree: a tag pinned to the left edge */}
                 <button
                   onClick={() => collapseTree(false)}
-                  title="Show tree"
-                  aria-label="Show tree"
+                  title={prefs.verticalTabs ? "Show sidebar" : "Show tree"}
+                  aria-label={prefs.verticalTabs ? "Show sidebar" : "Show tree"}
                   className="group fixed left-0 top-1/2 z-40 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-r-xl border border-l-0 border-border bg-bg-soft text-gray-400 shadow-md transition-all duration-150 hover:w-8 hover:border-accent/60 hover:bg-bg-softer hover:text-accent"
                 >
                   <ChevronRight
@@ -358,13 +436,36 @@ export default function Page() {
                 max={0.45}
                 storageKey="sidebar"
                 first={
-                  <TreeSidebar
-                    input={history.value}
-                    selectedPath={selectedPath}
-                    onSelect={onSelectPath}
-                    onOpenSubtree={openSubtree}
-                    onCollapse={() => collapseTree(true)}
-                  />
+                  prefs.verticalTabs ? (
+                    <SidebarPanel
+                      workspaces={workspaces}
+                      folders={folders}
+                      activeId={activeId}
+                      onSwitchWorkspace={switchWorkspace}
+                      onAddWorkspace={addWorkspace}
+                      onCloseWorkspace={closeWorkspace}
+                      onRenameWorkspace={renameWorkspace}
+                      onTogglePinWorkspace={togglePinWorkspace}
+                      onGroupTabs={groupTabs}
+                      onMoveToFolder={moveToFolder}
+                      onRenameFolder={renameFolder}
+                      onToggleFolder={toggleFolder}
+                      input={history.value}
+                      selectedPath={selectedPath}
+                      onSelectPath={onSelectPath}
+                      onOpenSubtree={openSubtree}
+                      split={prefs.sidebarSplit}
+                      onToggleSplit={() => setPref("sidebarSplit", !prefs.sidebarSplit)}
+                    />
+                  ) : (
+                    <TreeSidebar
+                      input={history.value}
+                      selectedPath={selectedPath}
+                      onSelect={onSelectPath}
+                      onOpenSubtree={openSubtree}
+                      onCollapse={() => collapseTree(true)}
+                    />
+                  )
                 }
                 second={workspace}
               />
@@ -403,6 +504,7 @@ export default function Page() {
       />
 
       <Onboarding open={onboardOpen} onClose={closeOnboarding} />
+      </SidebarToggleProvider>
       </DocumentActionsProvider>
       </ConsoleProvider>
     </ToastProvider>
@@ -419,6 +521,7 @@ function Header({
   canUndo,
   canRedo,
   onOpenHelp,
+  preferences,
 }: {
   active: ToolId;
   onSelect: (id: ToolId) => void;
@@ -429,6 +532,7 @@ function Header({
   canUndo: boolean;
   canRedo: boolean;
   onOpenHelp: () => void;
+  preferences: ReactNode;
 }) {
   return (
     <header className="flex shrink-0 flex-col gap-2 border-b border-border bg-bg-soft px-3 py-2 sm:flex-row sm:items-center">
@@ -494,6 +598,7 @@ function Header({
         <Button onClick={onOpenHelp} title="Help / intro">
           ?
         </Button>
+        {preferences}
         <ThemeToggle />
       </div>
     </header>

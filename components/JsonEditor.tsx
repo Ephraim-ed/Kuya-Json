@@ -9,8 +9,20 @@ import {
 } from "react";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { json } from "@codemirror/lang-json";
-import { EditorView, keymap, type Command } from "@codemirror/view";
-import { EditorSelection, type ChangeSpec } from "@codemirror/state";
+import {
+  EditorView,
+  keymap,
+  Decoration,
+  ViewPlugin,
+  type Command,
+  type DecorationSet,
+  type ViewUpdate,
+} from "@codemirror/view";
+import {
+  EditorSelection,
+  RangeSetBuilder,
+  type ChangeSpec,
+} from "@codemirror/state";
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { githubDark, githubLight } from "@uiw/codemirror-theme-github";
 import { useTheme } from "./theme";
@@ -97,6 +109,62 @@ const toggleLineComment: Command = (view) => {
   return allCommented ? uncommentLines(view) : commentLines(view);
 };
 
+// Subtle styling for `--` line comments (the JSON grammar doesn't know them).
+const commentMark = Decoration.mark({ class: "cm-jsonc-comment" });
+
+/** Index of the first `--` outside a string on a line, or -1. */
+function commentStart(text: string): number {
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (c === "\\") escaped = true;
+      else if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') inString = true;
+    else if (c === "-" && text[i + 1] === "-") return i;
+  }
+  return -1;
+}
+
+function buildCommentDecorations(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  for (const { from, to } of view.visibleRanges) {
+    let pos = from;
+    while (pos <= to) {
+      const line = view.state.doc.lineAt(pos);
+      const idx = commentStart(line.text);
+      if (idx >= 0) builder.add(line.from + idx, line.to, commentMark);
+      pos = line.to + 1;
+    }
+  }
+  return builder.finish();
+}
+
+const commentHighlighter = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = buildCommentDecorations(view);
+    }
+    update(u: ViewUpdate) {
+      if (u.docChanged || u.viewportChanged) {
+        this.decorations = buildCommentDecorations(u.view);
+      }
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+const commentTheme = EditorView.baseTheme({
+  ".cm-jsonc-comment": { fontStyle: "italic" },
+  "&light .cm-jsonc-comment": { color: "#9aa3ad !important" },
+  "&dark .cm-jsonc-comment": { color: "#5c6370 !important" },
+});
+
 const commentKeymap = keymap.of([
   { key: "Mod-/", run: toggleLineComment },
   { key: "Mod-k Mod-c", run: commentLines },
@@ -151,7 +219,9 @@ const JsonEditor = forwardRef<JsonEditorHandle, Props>(function JsonEditor(
         }
       }),
     ];
-    if (language === "json") ext.push(json(), lintGutter());
+    if (language === "json") {
+      ext.push(json(), lintGutter(), commentHighlighter, commentTheme);
+    }
     return ext;
   }, [language]);
 

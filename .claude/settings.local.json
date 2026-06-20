@@ -22,7 +22,9 @@
       "Bash(echo \"exit $?\")",
       "Bash(node -e \"const l=require\\('lucide-react'\\); ['ChevronDown','Pin','PinOff','X','Braces'].forEach\\(n=>console.log\\(n, !!l[n]\\)\\)\")",
       "Bash(npx tsx -e ' *)",
-      "Bash(echo \"tsc exit $?\")"
+      "Bash(echo \"tsc exit $?\")",
+      "Bash(xargs -n1 basename)",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['PanelLeftClose','PanelLeftOpen'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")"
     ],
     "additionalDirectories": [
       "/private/tmp"

@@ -31,6 +31,8 @@ interface Props {
   onCloseWorkspace: (id: string) => void;
   onRenameWorkspace: (id: string, name: string) => void;
   onTogglePinWorkspace: (id: string) => void;
+  /** Hide the horizontal tab bar (tabs are shown in the sidebar instead). */
+  verticalTabs?: boolean;
 }
 
 /**
@@ -53,6 +55,7 @@ export default function InputPanel({
   onCloseWorkspace,
   onRenameWorkspace,
   onTogglePinWorkspace,
+  verticalTabs = false,
 }: Props) {
   const [dragging, setDragging] = useState(false);
   const [fontSize, setFontSize] = useState(13);
@@ -110,18 +113,21 @@ export default function InputPanel({
         if (file) loadFile(file);
       }}
     >
-      {/* Workspace tabs (this row is exclusive to tabs) */}
-      <div className="border-b border-border">
-        <WorkspaceTabs
-          workspaces={workspaces}
-          activeId={activeId}
-          onSwitch={onSwitchWorkspace}
-          onAdd={onAddWorkspace}
-          onClose={onCloseWorkspace}
-          onRename={onRenameWorkspace}
-          onTogglePin={onTogglePinWorkspace}
-        />
-      </div>
+      {/* Workspace tabs (this row is exclusive to tabs). Hidden when the tabs
+          live in the sidebar (vertical tabs preference). */}
+      {!verticalTabs && (
+        <div className="border-b border-border">
+          <WorkspaceTabs
+            workspaces={workspaces}
+            activeId={activeId}
+            onSwitch={onSwitchWorkspace}
+            onAdd={onAddWorkspace}
+            onClose={onCloseWorkspace}
+            onRename={onRenameWorkspace}
+            onTogglePin={onTogglePinWorkspace}
+          />
+        </div>
+      )}
 
       {/* Editor */}
       <div ref={editorAreaRef} className="relative min-h-0 flex-1">

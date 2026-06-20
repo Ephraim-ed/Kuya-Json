@@ -5,12 +5,22 @@ export interface Workspace {
   name: string;
   content: string;
   pinned?: boolean;
+  /** When set, this workspace belongs to the folder (tab group) with this id. */
+  folderId?: string;
+}
+
+/** A collapsible group of workspace tabs (Chrome-style tab group). */
+export interface Folder {
+  id: string;
+  name: string;
+  collapsed?: boolean;
 }
 
 export interface PersistState {
   workspaces: Workspace[];
   activeId: string;
   activeTool: string;
+  folders?: Folder[];
 }
 
 const KEY = "kuya-json:state";
