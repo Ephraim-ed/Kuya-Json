@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Pin, PinOff, X, Braces, Folder as FolderIcon, FolderPlus, Layers } from "lucide-react";
+import { ChevronDown, ChevronRight, Pin, PinOff, X, Trash2, Braces, Folder as FolderIcon, FolderPlus, Layers, Columns2, PanelLeft } from "lucide-react";
 import type { Workspace, Folder } from "@/lib/persist";
 
 interface Props {
@@ -22,6 +22,9 @@ interface Props {
   onDeleteFolder?: (id: string) => void;
   onRenameFolder?: (id: string, name: string) => void;
   onToggleFolder?: (id: string) => void;
+  splitId?: string | null;
+  onOpenSplit?: (id: string) => void;
+  onCloseSplit?: () => void;
 }
 
 export default function WorkspaceTabs({
@@ -40,6 +43,9 @@ export default function WorkspaceTabs({
   onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
+  splitId,
+  onOpenSplit,
+  onCloseSplit,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -160,6 +166,8 @@ export default function WorkspaceTabs({
           onDragStart={(e) => {
             dragId.current = w.id;
             e.dataTransfer.effectAllowed = "move";
+            // Allow dropping onto the editor's left/right zones.
+            e.dataTransfer.setData("application/x-workspace-id", w.id);
           }}
           onDragEnd={() => {
             dragId.current = null;
@@ -210,17 +218,52 @@ export default function WorkspaceTabs({
               {w.pinned ? <PinOff size={11} /> : <Pin size={11} />}
             </button>
           )}
+          {onOpenSplit &&
+            (() => {
+              const isRight = w.id === splitId;
+              const isLeft = !!splitId && w.id === activeId;
+              const inSplit = isRight || isLeft;
+              return (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isRight) onCloseSplit?.();
+                    else if (!isLeft) onOpenSplit(w.id);
+                  }}
+                  title={
+                    isRight
+                      ? "Close split"
+                      : isLeft
+                        ? "Open on the left pane"
+                        : "Open in split (right)"
+                  }
+                  className={`flex h-4 w-4 items-center justify-center rounded-full hover:bg-bg ${
+                    isRight ? "text-accent hover:text-red-300" : "text-gray-500 hover:text-gray-200"
+                  } ${inSplit || active ? "" : "opacity-0 group-hover:opacity-100"}`}
+                >
+                  {isRight ? (
+                    <X size={11} />
+                  ) : isLeft ? (
+                    <PanelLeft size={11} />
+                  ) : (
+                    <Columns2 size={11} />
+                  )}
+                </button>
+              );
+            })()}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onClose(w.id);
+              if (window.confirm(`Delete workspace "${w.name}"? This can't be undone.`)) {
+                onClose(w.id);
+              }
             }}
-            title="Close workspace"
+            title="Delete workspace"
             className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-red-300 ${
               active ? "" : "opacity-0 group-hover:opacity-100"
             }`}
           >
-            <X size={12} />
+            <Trash2 size={11} />
           </button>
         </div>
       );
@@ -290,9 +333,18 @@ export default function WorkspaceTabs({
                   }`}
                 >
                   {f.collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                  <span className="relative flex shrink-0 items-center justify-center text-amber-500">
-                    <FolderIcon size={17} className="fill-current" />
-                    <span className="absolute top-[4px] text-[8px] font-bold leading-none text-white">
+                  <span className="relative flex shrink-0 items-center justify-center">
+                    <FolderIcon size={18} className="fill-current text-amber-500" />
+                    <span
+                      className="pointer-events-none absolute text-[8px] font-bold text-white"
+                      style={{
+                        left: 0,
+                        right: 0,
+                        top: "33%",
+                        textAlign: "center",
+                        lineHeight: 1,
+                      }}
+                    >
                       {members.length}
                     </span>
                   </span>
@@ -312,18 +364,21 @@ export default function WorkspaceTabs({
                   ) : (
                     <span className="flex-1 truncate">{f.name}</span>
                   )}
-                  <span className="text-[10px] tabular-nums text-gray-500">
-                    {members.length}
-                  </span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDeleteFolder?.(f.id);
+                      if (
+                        window.confirm(
+                          `Delete folder "${f.name}"? Its tabs will be kept (ungrouped).`,
+                        )
+                      ) {
+                        onDeleteFolder?.(f.id);
+                      }
                     }}
                     title="Delete folder (keeps its tabs)"
                     className="flex h-4 w-4 items-center justify-center rounded-full text-gray-500 opacity-0 hover:bg-bg hover:text-red-300 group-hover:opacity-100"
                   >
-                    <X size={12} />
+                    <Trash2 size={11} />
                   </button>
                 </div>
                 {!f.collapsed && members.map((w) => tabRow(w, true))}
@@ -349,9 +404,14 @@ export default function WorkspaceTabs({
           return (
             <div
               key={w.id}
+              draggable={editingId !== w.id}
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("application/x-workspace-id", w.id);
+              }}
               onClick={() => onSwitch(w.id)}
               onDoubleClick={() => startRename(w)}
-              title={`${w.name} — double-click to rename`}
+              title={`${w.name} — double-click to rename · drag onto the editor to split`}
               className={`group relative flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-t-lg px-3 text-xs transition-colors ${
                 active
                   ? "ctab-active z-10 -mb-px bg-bg-softer text-gray-100"

@@ -16,7 +16,11 @@ export default function ErrorScreen({
 
   return (
     <div className="flex h-screen flex-col items-center justify-center bg-bg px-6 text-center">
-      <div className="animate-kuya-pop flex w-full max-w-md flex-col items-center">
+      <div
+        className={`animate-kuya-pop flex w-full flex-col items-center transition-all ${
+          open ? "max-w-2xl" : "max-w-md"
+        }`}
+      >
         <KuyaSprite size={120} mood="sad" />
 
         <h1 className="mt-3 text-xl font-semibold text-gray-100">
@@ -49,7 +53,7 @@ export default function ErrorScreen({
             {open ? "Hide" : "Show"} error details
           </button>
           {open && (
-            <pre className="mt-2 max-h-52 overflow-auto rounded-md border border-border bg-bg-soft p-3 text-left font-mono text-[11px] leading-relaxed text-red-300">
+            <pre className="mt-2 max-h-96 min-h-48 overflow-auto rounded-md border border-border bg-bg-soft p-3 text-left font-mono text-[11px] leading-relaxed text-red-300">
               {error?.message || "Unknown error"}
               {error?.digest ? `\n\ndigest: ${error.digest}` : ""}
               {error?.stack ? `\n\n${error.stack}` : ""}

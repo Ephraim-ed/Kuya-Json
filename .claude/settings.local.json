@@ -34,7 +34,8 @@
       "Bash(node -e \"const l=require\\('lucide-react'\\); ['Archive','ArchiveRestore','DatabaseBackup','HardDriveDownload','HardDriveUpload'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")",
       "Bash(npm i *)",
       "Bash(grep -iB2 -A12 \"error\\\\|digest\")",
-      "Bash(node -e \"const l=require\\('lucide-react'\\); ['FolderPlus','Trash2'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")"
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['FolderPlus','Trash2'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['PanelLeft','PanelRight','Columns2','SquareSplitHorizontal'].forEach\\(n=>console.log\\(n,!!l[n]\\)\\)\")"
     ],
     "additionalDirectories": [
       "/private/tmp"

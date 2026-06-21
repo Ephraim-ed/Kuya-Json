@@ -16,6 +16,8 @@ import InputPanel from "@/components/InputPanel";
 import TreeSidebar from "@/components/TreeSidebar";
 import SidebarPanel from "@/components/SidebarPanel";
 import Preferences from "@/components/Preferences";
+import SecondaryEditor from "@/components/SecondaryEditor";
+import EditorDropZones from "@/components/EditorDropZones";
 import Split from "@/components/Split";
 import Tooltip from "@/components/Tooltip";
 import QueryModal from "@/components/QueryModal";
@@ -67,6 +69,8 @@ function useIsDesktop() {
 
 export default function Page() {
   const history = useHistory("");
+  const historyB = useHistory("");
+  const [splitId, setSplitId] = useState<string | null>(null);
   const [active, setActive] = useState<ToolId>("format");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [mobileTreeOpen, setMobileTreeOpen] = useState(false);
@@ -186,6 +190,26 @@ export default function Page() {
     );
   }, [history.value, activeId]);
 
+  // Split (right pane): load the chosen workspace's content when it changes.
+  useEffect(() => {
+    if (!splitId) return;
+    const w = workspaces.find((x) => x.id === splitId);
+    historyB.reset(w?.content ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [splitId]);
+
+  // Keep the split workspace's content in sync with the right pane editor.
+  useEffect(() => {
+    if (!loaded.current || !splitId) return;
+    setWorkspaces((ws) =>
+      ws.map((w) =>
+        w.id === splitId && w.content !== historyB.value
+          ? { ...w, content: historyB.value }
+          : w,
+      ),
+    );
+  }, [historyB.value, splitId]);
+
   // Persist everything (debounced) to IndexedDB.
   useEffect(() => {
     if (!loaded.current || workspaces.length === 0) return;
@@ -203,9 +227,38 @@ export default function Page() {
       setActiveId(id);
       history.reset(w?.content ?? "");
       setSelectedPath(null);
+      if (id === splitId) setSplitId(null); // can't be both panes
     },
-    [activeId, workspaces, history],
+    [activeId, workspaces, history, splitId],
   );
+
+  // Open a workspace in the right (split) pane.
+  const openSplit = useCallback(
+    (id: string) => {
+      if (id === activeId) return;
+      setSplitId(id);
+    },
+    [activeId],
+  );
+  const closeSplit = useCallback(() => setSplitId(null), []);
+  // Close the left pane: the right (split) workspace becomes the sole editor.
+  const closeLeft = useCallback(() => {
+    if (!splitId) return;
+    const w = workspaces.find((x) => x.id === splitId);
+    setActiveId(splitId);
+    history.reset(w?.content ?? "");
+    setSplitId(null);
+    setSelectedPath(null);
+  }, [splitId, workspaces, history]);
+  // Add a new workspace and open it in the right (split) pane.
+  const addToSplit = useCallback(() => {
+    const id = uuid();
+    setWorkspaces((ws) => [
+      ...ws,
+      { id, name: `Workspace ${ws.length + 1}`, content: "" },
+    ]);
+    setSplitId(id);
+  }, []);
 
   const addWorkspace = useCallback(
     (content = "", name?: string) => {
@@ -248,17 +301,28 @@ export default function Page() {
         setWorkspaces([fresh]);
         setActiveId(nid);
         history.reset("");
+        setSplitId(null);
         return;
       }
       setWorkspaces(remaining);
+
+      let nextActiveId = activeId;
       if (id === activeId) {
         const next = remaining[Math.max(0, idx - 1)] ?? remaining[0];
+        nextActiveId = next.id;
         setActiveId(next.id);
         history.reset(next.content);
         setSelectedPath(null);
       }
+
+      // If the closed tab was shown in the right (split) pane, keep the split
+      // open by moving it to a neighbor; only close the split if none remain.
+      if (id === splitId) {
+        const neighbor = remaining.find((w) => w.id !== nextActiveId);
+        setSplitId(neighbor ? neighbor.id : null);
+      }
     },
-    [workspaces, activeId, history],
+    [workspaces, activeId, history, splitId],
   );
 
   const renameWorkspace = useCallback((id: string, name: string) => {
@@ -329,8 +393,11 @@ export default function Page() {
     );
   }, []);
 
-  // The single shared document editor (with tabs + console), reused by tools.
-  const documentEditor = (
+  // The shared document editor (with tabs + console), reused by tools.
+  const splitWs = workspaces.find((w) => w.id === splitId);
+  const splitActive = !!splitId && splitId !== activeId && !!splitWs && isDesktop;
+
+  const inputPanel = (
     <InputPanel
       value={history.value}
       onChange={history.replace}
@@ -348,6 +415,39 @@ export default function Page() {
       onTogglePinWorkspace={togglePinWorkspace}
       verticalTabs={prefs.verticalTabs && isDesktop && !prefs.zenMode}
     />
+  );
+
+  const documentEditor = (
+    <EditorDropZones onDropLeft={switchWorkspace} onDropRight={openSplit}>
+      {splitActive ? (
+        <Split
+          direction="horizontal"
+          initial={0.5}
+          min={0.25}
+          max={0.75}
+          storageKey="doc-split"
+          first={inputPanel}
+          second={
+            <SecondaryEditor
+              value={historyB.value}
+              onChange={historyB.replace}
+              onReset={historyB.set}
+              workspaces={workspaces}
+              splitId={splitId!}
+              onSwitch={openSplit}
+              onAdd={addToSplit}
+              onClose={closeWorkspace}
+              onRename={renameWorkspace}
+              onTogglePin={togglePinWorkspace}
+              onCloseSplit={closeSplit}
+              verticalTabs={prefs.verticalTabs && isDesktop && !prefs.zenMode}
+            />
+          }
+        />
+      ) : (
+        inputPanel
+      )}
+    </EditorDropZones>
   );
 
   const workspace = (
@@ -378,6 +478,10 @@ export default function Page() {
           collapsed: treeCollapsed,
           toggle: () => collapseTree(!treeCollapsed),
           available: showTree && isDesktop && !prefs.zenMode,
+          split: prefs.sidebarSplit,
+          toggleSplit: () => setPref("sidebarSplit", !prefs.sidebarSplit),
+          splitAvailable:
+            showTree && isDesktop && !prefs.zenMode && prefs.verticalTabs,
         }}
       >
       <div className={`flex h-screen ${prefs.zenMode ? "flex-row" : "flex-col"}`}>
@@ -452,12 +556,14 @@ export default function Page() {
                       onDeleteFolder={deleteFolder}
                       onRenameFolder={renameFolder}
                       onToggleFolder={toggleFolder}
+                      splitId={splitId}
+                      onOpenSplit={openSplit}
+                      onCloseSplit={closeSplit}
                       input={history.value}
                       selectedPath={selectedPath}
                       onSelectPath={onSelectPath}
                       onOpenSubtree={openSubtree}
                       split={prefs.sidebarSplit}
-                      onToggleSplit={() => setPref("sidebarSplit", !prefs.sidebarSplit)}
                     />
                   ) : (
                     <TreeSidebar

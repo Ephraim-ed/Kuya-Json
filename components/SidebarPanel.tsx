@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Columns2, Rows2, Layers, ListTree } from "lucide-react";
+import { Layers, ListTree } from "lucide-react";
 import Split from "./Split";
 import WorkspaceTabs from "./WorkspaceTabs";
 import TreeSidebar from "./TreeSidebar";
-import Tooltip from "./Tooltip";
 import type { Workspace, Folder } from "@/lib/persist";
 
 interface Props {
@@ -24,6 +23,9 @@ interface Props {
   onDeleteFolder: (id: string) => void;
   onRenameFolder: (id: string, name: string) => void;
   onToggleFolder: (id: string) => void;
+  splitId: string | null;
+  onOpenSplit: (id: string) => void;
+  onCloseSplit: () => void;
   // Tree props
   input: string;
   selectedPath: string | null;
@@ -31,7 +33,6 @@ interface Props {
   onOpenSubtree: (path: string) => void;
   // Layout
   split: boolean;
-  onToggleSplit: () => void;
 }
 
 /**
@@ -54,12 +55,14 @@ export default function SidebarPanel({
   onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
+  splitId,
+  onOpenSplit,
+  onCloseSplit,
   input,
   selectedPath,
   onSelectPath,
   onOpenSubtree,
   split,
-  onToggleSplit,
 }: Props) {
   const [tab, setTab] = useState<"workspaces" | "tree">("workspaces");
 
@@ -80,6 +83,9 @@ export default function SidebarPanel({
       onDeleteFolder={onDeleteFolder}
       onRenameFolder={onRenameFolder}
       onToggleFolder={onToggleFolder}
+      splitId={splitId}
+      onOpenSplit={onOpenSplit}
+      onCloseSplit={onCloseSplit}
     />
   );
 
@@ -92,27 +98,10 @@ export default function SidebarPanel({
     />
   );
 
-  const splitButton = (
-    <Tooltip text={split ? "Combine into tabs" : "Split: tabs over tree"} width={170}>
-      <button
-        onClick={onToggleSplit}
-        aria-label="Toggle split layout"
-        className={`flex h-6 w-6 items-center justify-center rounded-md border border-border text-gray-400 hover:bg-bg-softer hover:text-gray-200 ${
-          split ? "bg-bg-softer text-gray-200" : ""
-        }`}
-      >
-        {split ? <Columns2 size={13} /> : <Rows2 size={13} />}
-      </button>
-    </Tooltip>
-  );
-
   // Split mode: two stacked panes with a draggable divider.
   if (split) {
     return (
       <div data-tour="sidebar" className="relative flex h-full min-h-0 flex-col bg-bg-soft">
-        <div className="flex items-center justify-end gap-1.5 border-b border-border px-2 py-1.5">
-          {splitButton}
-        </div>
         <div className="min-h-0 flex-1">
           <Split
             direction="vertical"
@@ -146,9 +135,6 @@ export default function SidebarPanel({
             {t}
           </button>
         ))}
-        <div className="ml-auto flex items-center gap-1.5 pb-1">
-          {splitButton}
-        </div>
       </div>
       <div className="min-h-0 flex-1">{tab === "workspaces" ? tabs : tree}</div>
     </div>
