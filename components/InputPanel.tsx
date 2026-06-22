@@ -10,7 +10,7 @@ import KuyaSprite from "./KuyaSprite";
 import Typewriter from "./Typewriter";
 import { DockPanel, useConsole } from "./console";
 import { validate } from "@/lib/json/validate";
-import type { Workspace } from "@/lib/persist";
+import type { Workspace, Folder } from "@/lib/persist";
 
 const ZOOM_KEY = "editor:fontSize";
 
@@ -31,8 +31,13 @@ interface Props {
   onCloseWorkspace: (id: string) => void;
   onRenameWorkspace: (id: string, name: string) => void;
   onTogglePinWorkspace: (id: string) => void;
-  /** Hide the horizontal tab bar (tabs are shown in the sidebar instead). */
-  verticalTabs?: boolean;
+  /** Hide the open-editor tab bar (vertical tabs: the Explorer drives nav). */
+  hideTabs?: boolean;
+  // Folder grouping for horizontal tabs (optional).
+  folders?: Folder[];
+  onGroupTabs?: (dragId: string, targetId: string) => void;
+  onMoveToFolder?: (id: string, folderId: string | null) => void;
+  onRenameFolder?: (id: string, name: string) => void;
 }
 
 /**
@@ -55,7 +60,11 @@ export default function InputPanel({
   onCloseWorkspace,
   onRenameWorkspace,
   onTogglePinWorkspace,
-  verticalTabs = false,
+  hideTabs = false,
+  folders,
+  onGroupTabs,
+  onMoveToFolder,
+  onRenameFolder,
 }: Props) {
   const [dragging, setDragging] = useState(false);
   const [fontSize, setFontSize] = useState(13);
@@ -113,11 +122,12 @@ export default function InputPanel({
         if (file) loadFile(file);
       }}
     >
-      {/* Workspace tabs (this row is exclusive to tabs). Hidden when the tabs
-          live in the sidebar (vertical tabs preference). */}
-      {!verticalTabs && (
+      {/* Open-editor tabs for this group (hidden in vertical-tabs mode, where
+          the Explorer sidebar drives navigation). */}
+      {!hideTabs && (
         <div className="border-b border-border">
           <WorkspaceTabs
+            editorTabs
             workspaces={workspaces}
             activeId={activeId}
             onSwitch={onSwitchWorkspace}
@@ -125,6 +135,10 @@ export default function InputPanel({
             onClose={onCloseWorkspace}
             onRename={onRenameWorkspace}
             onTogglePin={onTogglePinWorkspace}
+            folders={folders}
+            onGroupTabs={onGroupTabs}
+            onMoveToFolder={onMoveToFolder}
+            onRenameFolder={onRenameFolder}
           />
         </div>
       )}

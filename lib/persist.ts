@@ -16,11 +16,22 @@ export interface Folder {
   collapsed?: boolean;
 }
 
+/** An editor group (pane): its own ordered open editors and active one. */
+export interface Group {
+  openIds: string[];
+  activeId: string;
+}
+
 export interface PersistState {
   workspaces: Workspace[];
+  /** Kept for migrating older saves into `groups`. */
   activeId: string;
   activeTool: string;
   folders?: Folder[];
+  /** Editor groups (1 or 2). Absent in older saves — migrated on load. */
+  groups?: Group[];
+  /** Focused group index (0 = left, 1 = right). */
+  focused?: number;
 }
 
 const KEY = "kuya-json:state";

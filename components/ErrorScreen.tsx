@@ -24,7 +24,7 @@ export default function ErrorScreen({
         <KuyaSprite size={120} mood="sad" />
 
         <h1 className="mt-3 text-xl font-semibold text-gray-100">
-          Aray! Kuya hit a snag.
+          Aray! Kuya needs to fix this.
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-gray-400">
           Something went wrong while handling that. It&apos;s not you — Kuya tripped

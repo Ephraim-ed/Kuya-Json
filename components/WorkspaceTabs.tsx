@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Pin, PinOff, X, Trash2, Braces, Folder as FolderIcon, FolderPlus, Layers, Columns2, PanelLeft } from "lucide-react";
+import { ChevronDown, ChevronRight, Pin, PinOff, X, Trash2, Braces, Folder as FolderIcon, FolderPlus, Layers, Columns2, PanelLeft, PanelRight } from "lucide-react";
 import type { Workspace, Folder } from "@/lib/persist";
 
 interface Props {
@@ -22,9 +22,12 @@ interface Props {
   onDeleteFolder?: (id: string) => void;
   onRenameFolder?: (id: string, name: string) => void;
   onToggleFolder?: (id: string) => void;
-  splitId?: string | null;
-  onOpenSplit?: (id: string) => void;
-  onCloseSplit?: () => void;
+  /** Open this file in the right editor group (Explorer "open to the side"). */
+  onOpenSide?: (id: string) => void;
+  /** Which pane(s) each file is open in (Explorer side indicator). */
+  openSides?: Record<string, "left" | "right" | "both">;
+  /** Editor-tab mode: preserve order (no pinned-first), no pin/folder UI. */
+  editorTabs?: boolean;
 }
 
 export default function WorkspaceTabs({
@@ -43,9 +46,9 @@ export default function WorkspaceTabs({
   onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
-  splitId,
-  onOpenSplit,
-  onCloseSplit,
+  onOpenSide,
+  openSides,
+  editorTabs,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -60,12 +63,13 @@ export default function WorkspaceTabs({
   const scrollRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Pinned tabs render first, then the rest — both in original order.
+  // Editor tabs keep their given (open) order; Explorer pins float to the top.
   const ordered = useMemo(() => {
+    if (editorTabs) return workspaces;
     const pinned = workspaces.filter((w) => w.pinned);
     const rest = workspaces.filter((w) => !w.pinned);
     return [...pinned, ...rest];
-  }, [workspaces]);
+  }, [workspaces, editorTabs]);
 
   useEffect(() => {
     if (editingId) inputRef.current?.select();
@@ -198,10 +202,29 @@ export default function WorkspaceTabs({
         >
           <span
             className={`shrink-0 ${
-              active ? "text-blue-600 dark:text-yellow-400" : "text-gray-500"
+              openSides?.[w.id]
+                ? "text-accent"
+                : active
+                  ? "text-blue-600 dark:text-yellow-400"
+                  : "text-gray-500"
             }`}
+            title={
+              openSides?.[w.id]
+                ? `Open ${openSides[w.id] === "both" ? "in both panes" : `on the ${openSides[w.id]}`}`
+                : undefined
+            }
           >
-            {w.pinned ? <Pin size={12} className="fill-current" /> : <Braces size={12} />}
+            {openSides?.[w.id] === "left" ? (
+              <PanelLeft size={12} />
+            ) : openSides?.[w.id] === "right" ? (
+              <PanelRight size={12} />
+            ) : openSides?.[w.id] === "both" ? (
+              <Columns2 size={12} />
+            ) : w.pinned ? (
+              <Pin size={12} className="fill-current" />
+            ) : (
+              <Braces size={12} />
+            )}
           </span>
           {nameNode(w, "flex-1")}
           {!inFolder && (
@@ -218,39 +241,21 @@ export default function WorkspaceTabs({
               {w.pinned ? <PinOff size={11} /> : <Pin size={11} />}
             </button>
           )}
-          {onOpenSplit &&
-            (() => {
-              const isRight = w.id === splitId;
-              const isLeft = !!splitId && w.id === activeId;
-              const inSplit = isRight || isLeft;
-              return (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isRight) onCloseSplit?.();
-                    else if (!isLeft) onOpenSplit(w.id);
-                  }}
-                  title={
-                    isRight
-                      ? "Close split"
-                      : isLeft
-                        ? "Open on the left pane"
-                        : "Open in split (right)"
-                  }
-                  className={`flex h-4 w-4 items-center justify-center rounded-full hover:bg-bg ${
-                    isRight ? "text-accent hover:text-red-300" : "text-gray-500 hover:text-gray-200"
-                  } ${inSplit || active ? "" : "opacity-0 group-hover:opacity-100"}`}
-                >
-                  {isRight ? (
-                    <X size={11} />
-                  ) : isLeft ? (
-                    <PanelLeft size={11} />
-                  ) : (
-                    <Columns2 size={11} />
-                  )}
-                </button>
-              );
-            })()}
+          {onOpenSide && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenSide(w.id);
+              }}
+              title="Open to the side"
+              aria-label="Open to the side"
+              className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-gray-200 ${
+                active ? "" : "opacity-0 group-hover:opacity-100"
+              }`}
+            >
+              <Columns2 size={11} />
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -393,85 +398,165 @@ export default function WorkspaceTabs({
   }
 
   // --- Horizontal tab bar ----------------------------------------------------
+  function startRenameFolderH(f: Folder) {
+    setEditingFolderId(f.id);
+    setFolderDraft(f.name);
+  }
+  function commitFolderH() {
+    if (editingFolderId) onRenameFolder?.(editingFolderId, folderDraft.trim() || "Folder");
+    setEditingFolderId(null);
+  }
+
+  // A single horizontal tab. Dragging one onto another groups them into a folder.
+  const hTab = (w: Workspace) => {
+    const active = w.id === activeId;
+    return (
+      <div
+        key={w.id}
+        draggable={editingId !== w.id}
+        onDragStart={(e) => {
+          dragId.current = w.id;
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("application/x-workspace-id", w.id);
+        }}
+        onDragEnd={() => {
+          dragId.current = null;
+          setDragOver(null);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (dragId.current && dragId.current !== w.id) setDragOver(w.id);
+        }}
+        onDragLeave={() => setDragOver((d) => (d === w.id ? null : d))}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const d = dragId.current;
+          setDragOver(null);
+          if (d && d !== w.id) onGroupTabs?.(d, w.id);
+        }}
+        onClick={() => onSwitch(w.id)}
+        onDoubleClick={() => startRename(w)}
+        title={`${w.name} — drag onto another tab to group · onto the editor to split`}
+        className={`group relative flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-t-lg px-3 text-xs transition-colors ${
+          active
+            ? "ctab-active z-10 -mb-px bg-bg-softer text-gray-100"
+            : "bg-transparent text-gray-400 hover:bg-bg-soft hover:text-gray-200"
+        } ${dragOver === w.id ? "ring-1 ring-inset ring-accent" : ""}`}
+      >
+        <span
+          className={`shrink-0 ${
+            active ? "text-blue-600 dark:text-yellow-400" : "text-gray-500"
+          }`}
+        >
+          {w.pinned ? (
+            <Pin size={12} className="fill-current" />
+          ) : (
+            <Braces size={12} />
+          )}
+        </span>
+        {editingId === w.id ? (
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              if (e.key === "Escape") setEditingId(null);
+            }}
+            className="w-24 rounded border border-accent bg-bg px-1 text-xs text-gray-100 focus:outline-none"
+          />
+        ) : (
+          <span className="max-w-[150px] truncate">{w.name}</span>
+        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin(w.id);
+          }}
+          title={w.pinned ? "Unpin workspace" : "Pin workspace"}
+          className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-gray-200 ${
+            w.pinned || active ? "" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          {w.pinned ? <PinOff size={11} /> : <Pin size={11} />}
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose(w.id);
+          }}
+          title="Close workspace"
+          className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-red-300 ${
+            active ? "" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          <X size={12} />
+        </button>
+      </div>
+    );
+  };
+
+  const hLoose = ordered.filter((w) => !w.folderId);
+  const hFolders = folders
+    .map((f) => ({ f, members: ordered.filter((w) => w.folderId === f.id) }))
+    .filter((g) => g.members.length > 0);
+
   return (
     <div className="flex items-end bg-bg pr-1">
       <div
         ref={scrollRef}
         className="flex flex-1 items-end gap-1 overflow-x-auto overflow-y-hidden px-2 pt-1.5"
       >
-        {ordered.map((w) => {
-          const active = w.id === activeId;
-          return (
-            <div
-              key={w.id}
-              draggable={editingId !== w.id}
-              onDragStart={(e) => {
-                e.dataTransfer.effectAllowed = "move";
-                e.dataTransfer.setData("application/x-workspace-id", w.id);
-              }}
-              onClick={() => onSwitch(w.id)}
-              onDoubleClick={() => startRename(w)}
-              title={`${w.name} — double-click to rename · drag onto the editor to split`}
-              className={`group relative flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-t-lg px-3 text-xs transition-colors ${
-                active
-                  ? "ctab-active z-10 -mb-px bg-bg-softer text-gray-100"
-                  : "bg-transparent text-gray-400 hover:bg-bg-soft hover:text-gray-200"
-              }`}
+        {hLoose.map(hTab)}
+        {hFolders.map(({ f, members }) => (
+          <div
+            key={f.id}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (dragId.current) setDragOver(`folder:${f.id}`);
+            }}
+            onDragLeave={() =>
+              setDragOver((d) => (d === `folder:${f.id}` ? null : d))
+            }
+            onDrop={(e) => {
+              e.preventDefault();
+              const d = dragId.current;
+              setDragOver(null);
+              if (d) onMoveToFolder?.(d, f.id);
+            }}
+            title={f.name}
+            className={`flex items-end gap-0.5 self-stretch rounded-t-lg border-x border-t border-amber-500/40 bg-amber-500/5 px-1 ${
+              dragOver === `folder:${f.id}` ? "ring-1 ring-inset ring-accent" : ""
+            }`}
+          >
+            <span
+              onDoubleClick={() => startRenameFolderH(f)}
+              className="flex items-center gap-1 self-center px-1 text-[10px] font-medium text-amber-600 dark:text-amber-400"
             >
-              <span
-                className={`shrink-0 ${
-                  active ? "text-blue-600 dark:text-yellow-400" : "text-gray-500"
-                }`}
-              >
-                {w.pinned ? (
-                  <Pin size={12} className="fill-current" />
-                ) : (
-                  <Braces size={12} />
-                )}
-              </span>
-              {editingId === w.id ? (
+              <FolderIcon size={11} className="fill-current" />
+              {editingFolderId === f.id ? (
                 <input
-                  ref={inputRef}
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
+                  ref={folderInputRef}
+                  value={folderDraft}
+                  onChange={(e) => setFolderDraft(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  onBlur={commit}
+                  onBlur={commitFolderH}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") commit();
-                    if (e.key === "Escape") setEditingId(null);
+                    if (e.key === "Enter") commitFolderH();
+                    if (e.key === "Escape") setEditingFolderId(null);
                   }}
-                  className="w-24 rounded border border-accent bg-bg px-1 text-xs text-gray-100 focus:outline-none"
+                  className="w-20 rounded border border-accent bg-bg px-1 text-[10px] text-gray-100 focus:outline-none"
                 />
               ) : (
-                <span className="max-w-[150px] truncate">{w.name}</span>
+                <span className="max-w-[90px] truncate">{f.name}</span>
               )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTogglePin(w.id);
-                }}
-                title={w.pinned ? "Unpin workspace" : "Pin workspace"}
-                className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-gray-200 ${
-                  w.pinned || active ? "" : "opacity-0 group-hover:opacity-100"
-                }`}
-              >
-                {w.pinned ? <PinOff size={11} /> : <Pin size={11} />}
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClose(w.id);
-                }}
-                title="Close workspace"
-                className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-red-300 ${
-                  active ? "" : "opacity-0 group-hover:opacity-100"
-                }`}
-              >
-                <X size={12} />
-              </button>
-            </div>
-          );
-        })}
+            </span>
+            {members.map(hTab)}
+          </div>
+        ))}
         <button
           onClick={() => onAdd()}
           title="New workspace"

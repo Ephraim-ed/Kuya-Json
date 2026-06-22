@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import dynamic from "next/dynamic";
-import { Undo2, Redo2 } from "lucide-react";
+import { Undo2, Redo2, X } from "lucide-react";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import InstallButton from "@/components/InstallButton";
 import InputPanel from "@/components/InputPanel";
@@ -41,6 +41,7 @@ import {
   uuid,
   type Workspace,
   type Folder,
+  type Group,
 } from "@/lib/persist";
 
 const ToolHost = dynamic(() => import("@/components/ToolHost"), { ssr: false });
@@ -70,7 +71,11 @@ function useIsDesktop() {
 export default function Page() {
   const history = useHistory("");
   const historyB = useHistory("");
-  const [splitId, setSplitId] = useState<string | null>(null);
+  // Editor groups (panes): each has its own open editors + active one.
+  const [groups, setGroups] = useState<Group[]>([{ openIds: [], activeId: "" }]);
+  const [focused, setFocused] = useState(0);
+  const focusedRef = useRef(0);
+  focusedRef.current = focused;
   const [active, setActive] = useState<ToolId>("format");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [mobileTreeOpen, setMobileTreeOpen] = useState(false);
@@ -80,7 +85,6 @@ export default function Page() {
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [activeId, setActiveId] = useState<string>("");
   const inputEditor = useRef<JsonEditorHandle | null>(null);
   const { prefs, setPref } = usePreferences();
 
@@ -95,6 +99,21 @@ export default function Page() {
   const tool = TOOLS.find((t) => t.id === active)!;
   const showTree = !tool.ownInput; // Diff manages its own inputs.
   const isDesktop = useIsDesktop();
+
+  const leftActiveId = groups[0]?.activeId ?? "";
+  const rightActiveId = groups[1]?.activeId ?? "";
+  const splitActive = groups.length === 2 && isDesktop;
+  // Explorer sidebar present (vertical tabs): editor ✕ closes; otherwise deletes.
+  const explorerActive = prefs.verticalTabs && isDesktop && !prefs.zenMode;
+
+  // Which pane(s) each workspace is open in (for the Explorer side indicator).
+  const openSides = useMemo(() => {
+    const m: Record<string, "left" | "right" | "both"> = {};
+    for (const id of groups[0]?.openIds ?? []) m[id] = "left";
+    for (const id of groups[1]?.openIds ?? [])
+      m[id] = m[id] === "left" ? "both" : "right";
+    return m;
+  }, [groups]);
 
   const locations = useMemo(() => locateAll(history.value), [history.value]);
 
@@ -165,99 +184,148 @@ export default function Page() {
       }
       setWorkspaces(state.workspaces);
       setFolders(state.folders ?? []);
-      setActiveId(state.activeId);
+      // Migrate older saves (no groups) into a single group with all docs open.
+      const initialGroups: Group[] = state.groups ?? [
+        { openIds: state.workspaces.map((w) => w.id), activeId: state.activeId },
+      ];
+      setGroups(initialGroups);
+      setFocused(state.focused ?? 0);
       if (TOOLS.some((t) => t.id === state.activeTool)) {
         setActive(state.activeTool as ToolId);
       }
-      const current =
-        state.workspaces.find((w) => w.id === state.activeId) ??
-        state.workspaces[0];
-      history.reset(current?.content ?? "");
       loaded.current = true;
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep the active workspace's content in sync with the editor.
+  // Load each group's active workspace content into its editor history.
   useEffect(() => {
-    if (!loaded.current) return;
+    const w = workspaces.find((x) => x.id === leftActiveId);
+    history.reset(w?.content ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leftActiveId]);
+  useEffect(() => {
+    const w = workspaces.find((x) => x.id === rightActiveId);
+    historyB.reset(w?.content ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rightActiveId]);
+
+  // Sync each pane's edits back to its workspace.
+  useEffect(() => {
+    if (!loaded.current || !leftActiveId) return;
     setWorkspaces((ws) =>
       ws.map((w) =>
-        w.id === activeId && w.content !== history.value
+        w.id === leftActiveId && w.content !== history.value
           ? { ...w, content: history.value }
           : w,
       ),
     );
-  }, [history.value, activeId]);
-
-  // Split (right pane): load the chosen workspace's content when it changes.
+  }, [history.value, leftActiveId]);
   useEffect(() => {
-    if (!splitId) return;
-    const w = workspaces.find((x) => x.id === splitId);
-    historyB.reset(w?.content ?? "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [splitId]);
-
-  // Keep the split workspace's content in sync with the right pane editor.
-  useEffect(() => {
-    if (!loaded.current || !splitId) return;
+    if (!loaded.current || !rightActiveId) return;
     setWorkspaces((ws) =>
       ws.map((w) =>
-        w.id === splitId && w.content !== historyB.value
+        w.id === rightActiveId && w.content !== historyB.value
           ? { ...w, content: historyB.value }
           : w,
       ),
     );
-  }, [historyB.value, splitId]);
+  }, [historyB.value, rightActiveId]);
 
   // Persist everything (debounced) to IndexedDB.
   useEffect(() => {
     if (!loaded.current || workspaces.length === 0) return;
     const id = window.setTimeout(() => {
-      saveState({ workspaces, activeId, activeTool: active, folders });
+      saveState({
+        workspaces,
+        activeId: groups[0]?.activeId ?? "",
+        activeTool: active,
+        folders,
+        groups,
+        focused,
+      });
     }, 400);
     return () => window.clearTimeout(id);
-  }, [workspaces, activeId, active, folders]);
+  }, [workspaces, groups, focused, active, folders]);
 
-  // --- workspace actions ---
-  const switchWorkspace = useCallback(
-    (id: string) => {
-      if (id === activeId) return;
-      const w = workspaces.find((x) => x.id === id);
-      setActiveId(id);
-      history.reset(w?.content ?? "");
-      setSelectedPath(null);
-      if (id === splitId) setSplitId(null); // can't be both panes
-    },
-    [activeId, workspaces, history, splitId],
-  );
-
-  // Open a workspace in the right (split) pane.
-  const openSplit = useCallback(
-    (id: string) => {
-      if (id === activeId) return;
-      setSplitId(id);
-    },
-    [activeId],
-  );
-  const closeSplit = useCallback(() => setSplitId(null), []);
-  // Close the left pane: the right (split) workspace becomes the sole editor.
-  const closeLeft = useCallback(() => {
-    if (!splitId) return;
-    const w = workspaces.find((x) => x.id === splitId);
-    setActiveId(splitId);
-    history.reset(w?.content ?? "");
-    setSplitId(null);
+  // --- editor group actions ---
+  // Open a file (workspace) in a group, creating the right group if needed.
+  const openInGroup = useCallback((fileId: string, g: number) => {
+    setGroups((prev) => {
+      const next = [...prev];
+      if (g === 1 && next.length < 2) next.push({ openIds: [], activeId: "" });
+      const grp = next[g];
+      if (!grp) return prev;
+      const openIds = grp.openIds.includes(fileId)
+        ? grp.openIds
+        : [...grp.openIds, fileId];
+      next[g] = { openIds, activeId: fileId };
+      return next;
+    });
+    setFocused(g);
     setSelectedPath(null);
-  }, [splitId, workspaces, history]);
-  // Add a new workspace and open it in the right (split) pane.
-  const addToSplit = useCallback(() => {
-    const id = uuid();
-    setWorkspaces((ws) => [
-      ...ws,
-      { id, name: `Workspace ${ws.length + 1}`, content: "" },
-    ]);
-    setSplitId(id);
+  }, []);
+
+  // Move an open editor from its current group into another group.
+  const moveEditorToGroup = useCallback(
+    (id: string, targetG: number) => {
+      let next = groups.map((grp) => {
+        const openIds = grp.openIds.filter((x) => x !== id);
+        const activeId =
+          grp.activeId === id ? (openIds[openIds.length - 1] ?? "") : grp.activeId;
+        return { openIds, activeId };
+      });
+      if (targetG === 1 && next.length < 2) next.push({ openIds: [], activeId: "" });
+      const t = next[targetG];
+      if (!t) return;
+      next[targetG] = {
+        openIds: t.openIds.includes(id) ? t.openIds : [...t.openIds, id],
+        activeId: id,
+      };
+      let newFocused = targetG;
+      if (next.length === 2) {
+        if (next[1].openIds.length === 0) {
+          next = [next[0]];
+          newFocused = 0;
+        } else if (next[0].openIds.length === 0) {
+          next = [next[1]];
+          newFocused = 0;
+        }
+      }
+      setGroups(next);
+      setFocused(newFocused);
+    },
+    [groups],
+  );
+
+  // Close an open editor in a group (the file stays in the Explorer).
+  const closeEditor = useCallback((g: number, fileId: string) => {
+    setGroups((prev) => {
+      const grp = prev[g];
+      if (!grp) return prev;
+      const openIds = grp.openIds.filter((id) => id !== fileId);
+      if (openIds.length === 0) {
+        // Group emptied: collapse to the remaining group, or a blank one.
+        if (prev.length === 2) {
+          setFocused(0);
+          return g === 1 ? [prev[0]] : [prev[1]];
+        }
+        return [{ openIds: [], activeId: "" }];
+      }
+      let activeId = grp.activeId;
+      if (activeId === fileId) {
+        const idx = grp.openIds.indexOf(fileId);
+        activeId = openIds[Math.max(0, idx - 1)] ?? openIds[0];
+      }
+      const next = [...prev];
+      next[g] = { openIds, activeId };
+      return next;
+    });
+  }, []);
+
+  const closeGroup = useCallback((g: number) => {
+    setGroups((prev) => (prev.length === 2 ? (g === 1 ? [prev[0]] : [prev[1]]) : prev));
+    setFocused(0);
   }, []);
 
   const addWorkspace = useCallback(
@@ -267,11 +335,22 @@ export default function Page() {
         ...ws,
         { id, name: name ?? `Workspace ${ws.length + 1}`, content },
       ]);
-      setActiveId(id);
-      history.reset(content);
-      setSelectedPath(null);
+      openInGroup(id, focusedRef.current);
     },
-    [history],
+    [openInGroup],
+  );
+
+  // New file opened directly in a given group (group's "+" button).
+  const newFileInGroup = useCallback(
+    (g: number) => {
+      const id = uuid();
+      setWorkspaces((ws) => [
+        ...ws,
+        { id, name: `Workspace ${ws.length + 1}`, content: "" },
+      ]);
+      openInGroup(id, g);
+    },
+    [openInGroup],
   );
 
   // Open a node's subtree (resolved by JSONPath) in a new workspace.
@@ -291,38 +370,36 @@ export default function Page() {
     [history.value, addWorkspace],
   );
 
-  const closeWorkspace = useCallback(
+  // Delete a file entirely (Explorer trash): remove it from every group too.
+  const deleteWorkspace = useCallback(
     (id: string) => {
-      const idx = workspaces.findIndex((w) => w.id === id);
       const remaining = workspaces.filter((w) => w.id !== id);
       if (remaining.length === 0) {
         const nid = uuid();
-        const fresh = { id: nid, name: "Workspace 1", content: "" };
-        setWorkspaces([fresh]);
-        setActiveId(nid);
-        history.reset("");
-        setSplitId(null);
+        setWorkspaces([{ id: nid, name: "Workspace 1", content: "" }]);
+        setGroups([{ openIds: [nid], activeId: nid }]);
+        setFocused(0);
         return;
       }
       setWorkspaces(remaining);
-
-      let nextActiveId = activeId;
-      if (id === activeId) {
-        const next = remaining[Math.max(0, idx - 1)] ?? remaining[0];
-        nextActiveId = next.id;
-        setActiveId(next.id);
-        history.reset(next.content);
-        setSelectedPath(null);
+      let g = groups.map((grp) => {
+        const openIds = grp.openIds.filter((x) => x !== id);
+        const activeId =
+          grp.activeId === id ? (openIds[openIds.length - 1] ?? "") : grp.activeId;
+        return { openIds, activeId };
+      });
+      if (g.length === 2) {
+        if (g[1].openIds.length === 0) {
+          g = [g[0]];
+          setFocused(0);
+        } else if (g[0].openIds.length === 0) {
+          g = [g[1]];
+          setFocused(0);
+        }
       }
-
-      // If the closed tab was shown in the right (split) pane, keep the split
-      // open by moving it to a neighbor; only close the split if none remain.
-      if (id === splitId) {
-        const neighbor = remaining.find((w) => w.id !== nextActiveId);
-        setSplitId(neighbor ? neighbor.id : null);
-      }
+      setGroups(g);
     },
-    [workspaces, activeId, history, splitId],
+    [workspaces, groups],
   );
 
   const renameWorkspace = useCallback((id: string, name: string) => {
@@ -393,32 +470,73 @@ export default function Page() {
     );
   }, []);
 
-  // The shared document editor (with tabs + console), reused by tools.
-  const splitWs = workspaces.find((w) => w.id === splitId);
-  const splitActive = !!splitId && splitId !== activeId && !!splitWs && isDesktop;
+  // The open editors of each group, in tab order.
+  const groupWorkspaces = (g: number): Workspace[] => {
+    const grp = groups[g];
+    if (!grp) return [];
+    return grp.openIds
+      .map((id) => workspaces.find((w) => w.id === id))
+      .filter((w): w is Workspace => !!w);
+  };
 
-  const inputPanel = (
-    <InputPanel
-      value={history.value}
-      onChange={history.replace}
-      onReset={history.set}
-      editorRef={inputEditor}
-      selectedPath={selectedPath}
-      onSelectPath={onSelectPath}
-      onDeselect={() => setSelectedPath(null)}
-      workspaces={workspaces}
-      activeId={activeId}
-      onSwitchWorkspace={switchWorkspace}
-      onAddWorkspace={addWorkspace}
-      onCloseWorkspace={closeWorkspace}
-      onRenameWorkspace={renameWorkspace}
-      onTogglePinWorkspace={togglePinWorkspace}
-      verticalTabs={prefs.verticalTabs && isDesktop && !prefs.zenMode}
-    />
+  const leftPane = (
+    <div
+      className="relative h-full min-h-0"
+      onMouseDownCapture={() => setFocused(0)}
+    >
+      {splitActive && (
+        <button
+          onClick={() => closeGroup(0)}
+          title="Close left pane"
+          aria-label="Close left pane"
+          className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-bg-softer hover:text-red-300"
+        >
+          <X size={14} />
+        </button>
+      )}
+      <InputPanel
+        value={history.value}
+        onChange={history.replace}
+        onReset={history.set}
+        editorRef={inputEditor}
+        selectedPath={selectedPath}
+        onSelectPath={onSelectPath}
+        onDeselect={() => setSelectedPath(null)}
+        workspaces={
+          explorerActive
+            ? groupWorkspaces(0)
+            : splitActive
+              ? workspaces.filter(
+                  (w) => !(groups[1]?.openIds ?? []).includes(w.id),
+                )
+              : workspaces
+        }
+        activeId={leftActiveId}
+        onSwitchWorkspace={(id) => openInGroup(id, 0)}
+        onAddWorkspace={() => newFileInGroup(0)}
+        onCloseWorkspace={(id) =>
+          explorerActive ? closeEditor(0, id) : deleteWorkspace(id)
+        }
+        onRenameWorkspace={renameWorkspace}
+        onTogglePinWorkspace={togglePinWorkspace}
+        hideTabs={explorerActive}
+        folders={folders}
+        onGroupTabs={groupTabs}
+        onMoveToFolder={moveToFolder}
+        onRenameFolder={renameFolder}
+      />
+    </div>
   );
 
   const documentEditor = (
-    <EditorDropZones onDropLeft={switchWorkspace} onDropRight={openSplit}>
+    <EditorDropZones
+      onDropLeft={(id) =>
+        explorerActive ? openInGroup(id, 0) : moveEditorToGroup(id, 0)
+      }
+      onDropRight={(id) =>
+        explorerActive ? openInGroup(id, 1) : moveEditorToGroup(id, 1)
+      }
+    >
       {splitActive ? (
         <Split
           direction="horizontal"
@@ -426,26 +544,30 @@ export default function Page() {
           min={0.25}
           max={0.75}
           storageKey="doc-split"
-          first={inputPanel}
+          first={leftPane}
           second={
-            <SecondaryEditor
-              value={historyB.value}
-              onChange={historyB.replace}
-              onReset={historyB.set}
-              workspaces={workspaces}
-              splitId={splitId!}
-              onSwitch={openSplit}
-              onAdd={addToSplit}
-              onClose={closeWorkspace}
-              onRename={renameWorkspace}
-              onTogglePin={togglePinWorkspace}
-              onCloseSplit={closeSplit}
-              verticalTabs={prefs.verticalTabs && isDesktop && !prefs.zenMode}
-            />
+            <div className="h-full min-h-0" onMouseDownCapture={() => setFocused(1)}>
+              <SecondaryEditor
+                value={historyB.value}
+                onChange={historyB.replace}
+                onReset={historyB.set}
+                workspaces={groupWorkspaces(1)}
+                activeId={rightActiveId}
+                onSwitch={(id) => openInGroup(id, 1)}
+                onAdd={() => newFileInGroup(1)}
+                onClose={(id) =>
+                  explorerActive ? closeEditor(1, id) : deleteWorkspace(id)
+                }
+                onRename={renameWorkspace}
+                onTogglePin={togglePinWorkspace}
+                onCloseSplit={() => closeGroup(1)}
+                hideTabs={explorerActive}
+              />
+            </div>
           }
         />
       ) : (
-        inputPanel
+        leftPane
       )}
     </EditorDropZones>
   );
@@ -544,10 +666,10 @@ export default function Page() {
                     <SidebarPanel
                       workspaces={workspaces}
                       folders={folders}
-                      activeId={activeId}
-                      onSwitchWorkspace={switchWorkspace}
+                      activeId={groups[focused]?.activeId ?? ""}
+                      onOpenWorkspace={(id) => openInGroup(id, focused)}
                       onAddWorkspace={addWorkspace}
-                      onCloseWorkspace={closeWorkspace}
+                      onDeleteWorkspace={deleteWorkspace}
                       onRenameWorkspace={renameWorkspace}
                       onTogglePinWorkspace={togglePinWorkspace}
                       onGroupTabs={groupTabs}
@@ -556,9 +678,8 @@ export default function Page() {
                       onDeleteFolder={deleteFolder}
                       onRenameFolder={renameFolder}
                       onToggleFolder={toggleFolder}
-                      splitId={splitId}
-                      onOpenSplit={openSplit}
-                      onCloseSplit={closeSplit}
+                      onOpenSide={(id) => openInGroup(id, 1)}
+                      openSides={openSides}
                       input={history.value}
                       selectedPath={selectedPath}
                       onSelectPath={onSelectPath}
@@ -599,14 +720,15 @@ export default function Page() {
         open={globalSearchOpen}
         onClose={() => setGlobalSearchOpen(false)}
         workspaces={workspaces}
-        activeId={activeId}
+        activeId={leftActiveId}
         onJump={(id, from, to) => {
-          if (id !== activeId) switchWorkspace(id);
+          const wasActive = id === leftActiveId;
+          openInGroup(id, 0);
           setGlobalSearchOpen(false);
-          // Let the workspace swap settle, then select the match.
+          // Let the editor settle, then select the match.
           setTimeout(
             () => inputEditor.current?.focusRange(from, to, { focus: false }),
-            id !== activeId ? 80 : 0,
+            wasActive ? 0 : 80,
           );
         }}
       />

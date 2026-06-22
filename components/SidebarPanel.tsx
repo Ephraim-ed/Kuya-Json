@@ -12,9 +12,9 @@ interface Props {
   workspaces: Workspace[];
   folders: Folder[];
   activeId: string;
-  onSwitchWorkspace: (id: string) => void;
+  onOpenWorkspace: (id: string) => void;
   onAddWorkspace: () => void;
-  onCloseWorkspace: (id: string) => void;
+  onDeleteWorkspace: (id: string) => void;
   onRenameWorkspace: (id: string, name: string) => void;
   onTogglePinWorkspace: (id: string) => void;
   onGroupTabs: (dragId: string, targetId: string) => void;
@@ -23,9 +23,8 @@ interface Props {
   onDeleteFolder: (id: string) => void;
   onRenameFolder: (id: string, name: string) => void;
   onToggleFolder: (id: string) => void;
-  splitId: string | null;
-  onOpenSplit: (id: string) => void;
-  onCloseSplit: () => void;
+  onOpenSide: (id: string) => void;
+  openSides: Record<string, "left" | "right" | "both">;
   // Tree props
   input: string;
   selectedPath: string | null;
@@ -44,9 +43,9 @@ export default function SidebarPanel({
   workspaces,
   folders,
   activeId,
-  onSwitchWorkspace,
+  onOpenWorkspace,
   onAddWorkspace,
-  onCloseWorkspace,
+  onDeleteWorkspace,
   onRenameWorkspace,
   onTogglePinWorkspace,
   onGroupTabs,
@@ -55,9 +54,8 @@ export default function SidebarPanel({
   onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
-  splitId,
-  onOpenSplit,
-  onCloseSplit,
+  onOpenSide,
+  openSides,
   input,
   selectedPath,
   onSelectPath,
@@ -72,9 +70,9 @@ export default function SidebarPanel({
       workspaces={workspaces}
       folders={folders}
       activeId={activeId}
-      onSwitch={onSwitchWorkspace}
+      onSwitch={onOpenWorkspace}
       onAdd={onAddWorkspace}
-      onClose={onCloseWorkspace}
+      onClose={onDeleteWorkspace}
       onRename={onRenameWorkspace}
       onTogglePin={onTogglePinWorkspace}
       onGroupTabs={onGroupTabs}
@@ -83,9 +81,8 @@ export default function SidebarPanel({
       onDeleteFolder={onDeleteFolder}
       onRenameFolder={onRenameFolder}
       onToggleFolder={onToggleFolder}
-      splitId={splitId}
-      onOpenSplit={onOpenSplit}
-      onCloseSplit={onCloseSplit}
+      onOpenSide={onOpenSide}
+      openSides={openSides}
     />
   );
 
