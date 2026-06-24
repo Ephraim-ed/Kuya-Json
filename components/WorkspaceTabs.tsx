@@ -28,6 +28,8 @@ interface Props {
   openSides?: Record<string, "left" | "right" | "both">;
   /** Editor-tab mode: preserve order (no pinned-first), no pin/folder UI. */
   editorTabs?: boolean;
+  /** Rearrange a tab relative to a target (drag to reorder). */
+  onReorder?: (dragId: string, targetId: string, before: boolean) => void;
 }
 
 export default function WorkspaceTabs({
@@ -49,6 +51,7 @@ export default function WorkspaceTabs({
   onOpenSide,
   openSides,
   editorTabs,
+  onReorder,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -57,6 +60,7 @@ export default function WorkspaceTabs({
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [folderDraft, setFolderDraft] = useState("");
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [dragPos, setDragPos] = useState<"before" | "after" | "group">("group");
   const dragId = useRef<string | null>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -425,7 +429,17 @@ export default function WorkspaceTabs({
         }}
         onDragOver={(e) => {
           e.preventDefault();
-          if (dragId.current && dragId.current !== w.id) setDragOver(w.id);
+          if (!dragId.current || dragId.current === w.id) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const pos =
+            x < rect.width * 0.3
+              ? "before"
+              : x > rect.width * 0.7
+                ? "after"
+                : "group";
+          setDragOver(w.id);
+          setDragPos(pos);
         }}
         onDragLeave={() => setDragOver((d) => (d === w.id ? null : d))}
         onDrop={(e) => {
@@ -433,16 +447,22 @@ export default function WorkspaceTabs({
           e.stopPropagation();
           const d = dragId.current;
           setDragOver(null);
-          if (d && d !== w.id) onGroupTabs?.(d, w.id);
+          if (!d || d === w.id) return;
+          if (dragPos === "group") onGroupTabs?.(d, w.id);
+          else onReorder?.(d, w.id, dragPos === "before");
         }}
         onClick={() => onSwitch(w.id)}
         onDoubleClick={() => startRename(w)}
-        title={`${w.name} — drag onto another tab to group · onto the editor to split`}
+        title={`${w.name} — drag to reorder · drop on its center to group · onto the editor to split`}
         className={`group relative flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-t-lg px-3 text-xs transition-colors ${
           active
             ? "ctab-active z-10 -mb-px bg-bg-softer text-gray-100"
             : "bg-transparent text-gray-400 hover:bg-bg-soft hover:text-gray-200"
-        } ${dragOver === w.id ? "ring-1 ring-inset ring-accent" : ""}`}
+        } ${
+          dragOver === w.id && dragPos === "group" ? "ring-1 ring-inset ring-accent" : ""
+        } ${dragOver === w.id && dragPos === "before" ? "border-l-2 border-accent" : ""} ${
+          dragOver === w.id && dragPos === "after" ? "border-r-2 border-accent" : ""
+        }`}
       >
         <span
           className={`shrink-0 ${

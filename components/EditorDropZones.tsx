@@ -4,6 +4,8 @@ import { useState, type ReactNode } from "react";
 import { PanelLeft, PanelRight } from "lucide-react";
 
 const MIME = "application/x-workspace-id";
+/** Height of the tab strip to exclude from the split drop zones (px). */
+const TAB_BAND = 40;
 
 /**
  * Wraps the document editor so a workspace dragged from the sidebar can be
@@ -28,8 +30,13 @@ export default function EditorDropZones({
       className="relative h-full min-h-0"
       onDragOver={(e) => {
         if (!isWorkspaceDrag(e)) return;
-        e.preventDefault();
         const rect = e.currentTarget.getBoundingClientRect();
+        // Leave the top tab-strip band alone so tabs can be reordered there.
+        if (e.clientY - rect.top < TAB_BAND) {
+          setSide(null);
+          return;
+        }
+        e.preventDefault();
         setSide(e.clientX - rect.left < rect.width / 2 ? "left" : "right");
       }}
       onDragLeave={(e) => {

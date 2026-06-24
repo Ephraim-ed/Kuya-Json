@@ -202,6 +202,17 @@ export default function Preferences({
             <span className="text-sm text-gray-300">Theme</span>
             <ThemeSwitch dark={theme === "dark"} onToggle={toggle} />
           </div>
+
+          <div className="my-1.5 border-t border-border" />
+          <div className="px-1.5 pb-1 pt-0.5 text-[11px] leading-snug text-gray-500">
+            Reach me out at{" "}
+            <a
+              href="mailto:ephraimvelasco@gmail.com"
+              className="text-accent hover:underline"
+            >
+              ephraimvelasco@gmail.com
+            </a>
+          </div>
           </div>,
           document.body,
         )}

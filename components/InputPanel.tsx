@@ -38,6 +38,7 @@ interface Props {
   onGroupTabs?: (dragId: string, targetId: string) => void;
   onMoveToFolder?: (id: string, folderId: string | null) => void;
   onRenameFolder?: (id: string, name: string) => void;
+  onReorder?: (dragId: string, targetId: string, before: boolean) => void;
 }
 
 /**
@@ -65,6 +66,7 @@ export default function InputPanel({
   onGroupTabs,
   onMoveToFolder,
   onRenameFolder,
+  onReorder,
 }: Props) {
   const [dragging, setDragging] = useState(false);
   const [fontSize, setFontSize] = useState(13);
@@ -139,6 +141,7 @@ export default function InputPanel({
             onGroupTabs={onGroupTabs}
             onMoveToFolder={onMoveToFolder}
             onRenameFolder={onRenameFolder}
+            onReorder={onReorder}
           />
         </div>
       )}

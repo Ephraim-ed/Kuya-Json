@@ -406,6 +406,25 @@ export default function Page() {
     setWorkspaces((ws) => ws.map((w) => (w.id === id ? { ...w, name } : w)));
   }, []);
 
+  // Reorder a tab relative to a target (drag to rearrange).
+  const reorderWorkspace = useCallback(
+    (dragId: string, targetId: string, before: boolean) => {
+      if (dragId === targetId) return;
+      setWorkspaces((prev) => {
+        const arr = [...prev];
+        const from = arr.findIndex((w) => w.id === dragId);
+        if (from < 0) return prev;
+        const [moved] = arr.splice(from, 1);
+        let to = arr.findIndex((w) => w.id === targetId);
+        if (to < 0) return prev;
+        if (!before) to += 1;
+        arr.splice(to, 0, moved);
+        return arr;
+      });
+    },
+    [],
+  );
+
   const togglePinWorkspace = useCallback((id: string) => {
     setWorkspaces((ws) =>
       ws.map((w) => (w.id === id ? { ...w, pinned: !w.pinned } : w)),
@@ -524,6 +543,7 @@ export default function Page() {
         onGroupTabs={groupTabs}
         onMoveToFolder={moveToFolder}
         onRenameFolder={renameFolder}
+        onReorder={reorderWorkspace}
       />
     </div>
   );
