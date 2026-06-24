@@ -26,6 +26,7 @@ import { DocumentActionsProvider } from "@/components/DocumentActions";
 import { SidebarToggleProvider } from "@/components/SidebarToggle";
 import { ZenContext } from "@/components/zen";
 import Tour from "@/components/Tour";
+import ProTip from "@/components/ProTip";
 import { Button, ToastProvider } from "@/components/ui";
 import type { JsonEditorHandle } from "@/components/JsonEditor";
 import { TOOLS } from "@/components/tools/registry";
@@ -754,6 +755,7 @@ export default function Page() {
       />
 
       <Tour open={onboardOpen} onClose={closeOnboarding} />
+      <ProTip />
       </SidebarToggleProvider>
       </DocumentActionsProvider>
       </ConsoleProvider>
