@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronsUp, ChevronsDown, ChevronLeft, ListTree } from "lucide-react";
+import { ChevronsUp, ChevronsDown, Search, X } from "lucide-react";
 import TreeView from "./TreeView";
 import ZoomControls from "./ZoomControls";
 import Tooltip from "./Tooltip";
@@ -17,8 +17,6 @@ interface Props {
   selectedPath: string | null;
   onSelect: (path: string) => void;
   onOpenSubtree?: (path: string) => void;
-  /** Collapse the tree to the side (desktop). */
-  onCollapse?: () => void;
   /** Mobile drawer close button; omitted on desktop. */
   onClose?: () => void;
 }
@@ -28,7 +26,6 @@ export default function TreeSidebar({
   selectedPath,
   onSelect,
   onOpenSubtree,
-  onCollapse,
   onClose,
 }: Props) {
   const [filter, setFilter] = useState("");
@@ -64,24 +61,33 @@ export default function TreeSidebar({
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-bg-soft">
-      {/* Collapse handle anchored to the sidebar's right edge */}
-      {onCollapse && (
-        <button
-          onClick={onCollapse}
-          title="Collapse tree"
-          aria-label="Collapse tree"
-          className="absolute right-0 top-1/2 z-20 hidden h-12 w-3.5 -translate-y-1/2 items-center justify-center rounded-l-md border border-r-0 border-border bg-bg-softer text-gray-400 shadow-sm transition-colors hover:bg-accent hover:text-white lg:flex"
-        >
-          <ChevronLeft size={13} />
-        </button>
-      )}
-      <div className="flex items-center gap-2 border-b border-border px-2 py-1.5">
-        <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-          <ListTree size={13} />
-          Tree
-        </span>
+      <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
+        <div className="relative flex-1">
+          <Search
+            size={12}
+            className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500"
+          />
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setFilter("");
+            }}
+            placeholder="Search tree…"
+            className="w-full rounded border border-border bg-bg py-1 pl-7 pr-6 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+          {filtering && (
+            <button
+              onClick={() => setFilter("")}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-200"
+              aria-label="Clear search"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5">
           {/* Depth: collapse-all · level · expand-all (one segmented control) */}
           <div
             className={`inline-flex items-center overflow-hidden rounded-md border border-border bg-bg ${
@@ -128,26 +134,6 @@ export default function TreeSidebar({
               onClick={onClose}
               className="px-1 text-gray-400 hover:text-gray-200 lg:hidden"
               aria-label="Close tree"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="border-b border-border p-2">
-        <div className="relative">
-          <input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Search keys & values…"
-            className="w-full rounded border border-border bg-bg px-2 py-1 pr-6 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent"
-          />
-          {filtering && (
-            <button
-              onClick={() => setFilter("")}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-200"
-              aria-label="Clear search"
             >
               ✕
             </button>

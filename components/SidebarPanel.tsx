@@ -19,7 +19,6 @@ interface Props {
   onTogglePinWorkspace: (id: string) => void;
   onGroupTabs: (dragId: string, targetId: string) => void;
   onMoveToFolder: (id: string, folderId: string | null) => void;
-  onAddFolder: () => void;
   onDeleteFolder: (id: string) => void;
   onRenameFolder: (id: string, name: string) => void;
   onToggleFolder: (id: string) => void;
@@ -50,7 +49,6 @@ export default function SidebarPanel({
   onTogglePinWorkspace,
   onGroupTabs,
   onMoveToFolder,
-  onAddFolder,
   onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
@@ -77,7 +75,6 @@ export default function SidebarPanel({
       onTogglePin={onTogglePinWorkspace}
       onGroupTabs={onGroupTabs}
       onMoveToFolder={onMoveToFolder}
-      onAddFolder={onAddFolder}
       onDeleteFolder={onDeleteFolder}
       onRenameFolder={onRenameFolder}
       onToggleFolder={onToggleFolder}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Pin, PinOff, X, Trash2, Braces, Folder as FolderIcon, FolderPlus, Layers, Columns2, PanelLeft, PanelRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Pin, PinOff, X, Trash2, Braces, Folder as FolderIcon, Layers, Columns2, PanelLeft, PanelRight, Search } from "lucide-react";
 import type { Workspace, Folder } from "@/lib/persist";
+import { useConfirm } from "./ConfirmDialog";
 
 interface Props {
   workspaces: Workspace[];
@@ -18,7 +19,6 @@ interface Props {
   folders?: Folder[];
   onGroupTabs?: (dragId: string, targetId: string) => void;
   onMoveToFolder?: (id: string, folderId: string | null) => void;
-  onAddFolder?: () => void;
   onDeleteFolder?: (id: string) => void;
   onRenameFolder?: (id: string, name: string) => void;
   onToggleFolder?: (id: string) => void;
@@ -44,7 +44,6 @@ export default function WorkspaceTabs({
   folders = [],
   onGroupTabs,
   onMoveToFolder,
-  onAddFolder,
   onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
@@ -53,6 +52,7 @@ export default function WorkspaceTabs({
   editorTabs,
   onReorder,
 }: Props) {
+  const confirm = useConfirm();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [overflowing, setOverflowing] = useState(false);
@@ -61,6 +61,8 @@ export default function WorkspaceTabs({
   const [folderDraft, setFolderDraft] = useState("");
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragPos, setDragPos] = useState<"before" | "after" | "group">("group");
+  const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
+  const [query, setQuery] = useState("");
   const dragId = useRef<string | null>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -152,7 +154,10 @@ export default function WorkspaceTabs({
 
   // --- Vertical sidebar list -------------------------------------------------
   if (orientation === "vertical") {
-    const loose = ordered.filter((w) => !w.folderId);
+    const q = query.trim().toLowerCase();
+    const matches = (w: Workspace) => !q || w.name.toLowerCase().includes(q);
+    const visible = ordered.filter(matches);
+    const loose = visible.filter((w) => !w.folderId);
     const loosePinned = loose.filter((w) => w.pinned);
     const looseRest = loose.filter((w) => !w.pinned);
 
@@ -231,16 +236,14 @@ export default function WorkspaceTabs({
             )}
           </span>
           {nameNode(w, "flex-1")}
-          {!inFolder && (
+          {(!inFolder || w.pinned) && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onTogglePin(w.id);
               }}
               title={w.pinned ? "Unpin workspace" : "Pin workspace"}
-              className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-gray-200 ${
-                w.pinned || active ? "" : "opacity-0 group-hover:opacity-100"
-              }`}
+              className="flex h-4 w-4 items-center justify-center rounded-full text-gray-500 opacity-0 hover:bg-bg hover:text-gray-200 group-hover:opacity-100"
             >
               {w.pinned ? <PinOff size={11} /> : <Pin size={11} />}
             </button>
@@ -261,11 +264,17 @@ export default function WorkspaceTabs({
             </button>
           )}
           <button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
-              if (window.confirm(`Delete workspace "${w.name}"? This can't be undone.`)) {
-                onClose(w.id);
-              }
+              const ok = await confirm({
+                title: `Delete "${w.name}"?`,
+                description:
+                  "This workspace will be permanently removed. This can't be undone.",
+                confirmLabel: "Delete",
+                danger: true,
+                dontAskKey: "kuya-json:skip-delete-confirm",
+              });
+              if (ok) onClose(w.id);
             }}
             title="Delete workspace"
             className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-red-300 ${
@@ -280,24 +289,36 @@ export default function WorkspaceTabs({
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-soft">
-        <div className="flex items-center gap-2 border-b border-border px-2 py-1.5">
-          <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-            <Layers size={13} />
-            Workspaces
-          </span>
-          <button
-            onClick={() => onAddFolder?.()}
-            title="New folder"
-            aria-label="New folder"
-            className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-bg-softer hover:text-gray-200"
-          >
-            <FolderPlus size={14} />
-          </button>
+        <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
+          <div className="relative flex-1">
+            <Search
+              size={12}
+              className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500"
+            />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setQuery("");
+              }}
+              placeholder="Search workspaces…"
+              className="w-full rounded border border-border bg-bg py-1 pl-7 pr-6 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-200"
+                aria-label="Clear search"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
           <button
             onClick={() => onAdd()}
             title="New workspace"
             aria-label="New workspace"
-            className="flex h-6 w-6 items-center justify-center rounded-md text-base text-gray-400 hover:bg-bg-softer hover:text-gray-200"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base text-gray-400 hover:bg-bg-softer hover:text-gray-200"
           >
             +
           </button>
@@ -312,10 +333,41 @@ export default function WorkspaceTabs({
             if (d) onMoveToFolder?.(d, null); // drop on empty area → ungroup
           }}
         >
-          {loosePinned.map((w) => tabRow(w, false))}
+          {loosePinned.length > 0 && (
+            <div>
+              <div
+                onClick={() => setPinnedCollapsed((c) => !c)}
+                title="Pinned"
+                className="flex cursor-pointer items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-300 hover:bg-bg-soft"
+              >
+                {pinnedCollapsed ? (
+                  <ChevronRight size={12} />
+                ) : (
+                  <ChevronDown size={12} />
+                )}
+                <span className="relative flex shrink-0 items-center justify-center">
+                  <FolderIcon size={18} className="fill-current text-amber-500" />
+                  <span
+                    className="pointer-events-none absolute text-[8px] font-bold text-white"
+                    style={{ left: 0, right: 0, top: "33%", textAlign: "center", lineHeight: 1 }}
+                  >
+                    {loosePinned.length}
+                  </span>
+                </span>
+                <span className="flex flex-1 items-center gap-1 truncate">
+                  Pinned
+                  <Pin size={10} className="fill-current text-gray-500" />
+                </span>
+              </div>
+              {!pinnedCollapsed && loosePinned.map((w) => tabRow(w, true))}
+            </div>
+          )}
 
           {folders.map((f) => {
-            const members = workspaces.filter((w) => w.folderId === f.id);
+            const members = workspaces.filter(
+              (w) => w.folderId === f.id && matches(w),
+            );
+            if (q && members.length === 0) return null;
             const over = dragOver === `folder:${f.id}`;
             return (
               <div key={f.id}>
@@ -504,11 +556,19 @@ export default function WorkspaceTabs({
           {w.pinned ? <PinOff size={11} /> : <Pin size={11} />}
         </button>
         <button
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
-            onClose(w.id);
+            const ok = await confirm({
+              title: `Delete "${w.name}"?`,
+              description:
+                "This workspace will be permanently removed. This can't be undone.",
+              confirmLabel: "Delete",
+              danger: true,
+              dontAskKey: "kuya-json:skip-delete-confirm",
+            });
+            if (ok) onClose(w.id);
           }}
-          title="Close workspace"
+          title="Delete workspace"
           className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-red-300 ${
             active ? "" : "opacity-0 group-hover:opacity-100"
           }`}
@@ -528,6 +588,16 @@ export default function WorkspaceTabs({
     <div className="flex items-end bg-bg pr-1">
       <div
         ref={scrollRef}
+        onDragOver={(e) => {
+          if (dragId.current) e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const d = dragId.current;
+          setDragOver(null);
+          // Dropped on empty strip area (outside any folder) → ungroup.
+          if (d) onMoveToFolder?.(d, null);
+        }}
         className="flex flex-1 items-end gap-1 overflow-x-auto overflow-y-hidden px-2 pt-1.5"
       >
         {hLoose.map(hTab)}

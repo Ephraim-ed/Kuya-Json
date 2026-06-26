@@ -113,11 +113,15 @@ export default function InputPanel({
     <div
       className="relative flex h-full min-h-0 flex-col"
       onDragOver={(e) => {
+        // Only react to real file drags — ignore tab/workspace drags so tabs
+        // can be reordered and dropped without the "load a file" overlay.
+        if (!e.dataTransfer.types.includes("Files")) return;
         e.preventDefault();
         setDragging(true);
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
         e.preventDefault();
         setDragging(false);
         const file = e.dataTransfer.files[0];

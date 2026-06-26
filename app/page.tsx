@@ -24,6 +24,7 @@ import QueryModal from "@/components/QueryModal";
 import { ConsoleProvider } from "@/components/console";
 import { DocumentActionsProvider } from "@/components/DocumentActions";
 import { SidebarToggleProvider } from "@/components/SidebarToggle";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { ZenContext } from "@/components/zen";
 import Tour from "@/components/Tour";
 import ProTip from "@/components/ProTip";
@@ -383,6 +384,8 @@ export default function Page() {
         return;
       }
       setWorkspaces(remaining);
+      // Drop folders left with no members.
+      setFolders((fs) => fs.filter((f) => remaining.some((w) => w.folderId === f.id)));
       let g = groups.map((grp) => {
         const openIds = grp.openIds.filter((x) => x !== id);
         const activeId =
@@ -454,21 +457,27 @@ export default function Page() {
             : w,
       );
       setWorkspaces(next);
-      if (newFolder) setFolders((fs) => [...fs, newFolder!]);
+      // Add the new folder and drop any that are now empty (e.g. the source).
+      setFolders((fs) => {
+        const withNew = newFolder ? [...fs, newFolder] : fs;
+        return withNew.filter((f) => next.some((w) => w.folderId === f.id));
+      });
     },
     [workspaces],
   );
 
   // Move a tab into a folder, or out of any folder (folderId = null).
-  const moveToFolder = useCallback((id: string, folderId: string | null) => {
-    setWorkspaces((ws) =>
-      ws.map((w) => (w.id === id ? { ...w, folderId: folderId ?? undefined } : w)),
-    );
-  }, []);
-
-  const addFolder = useCallback(() => {
-    setFolders((fs) => [...fs, { id: uuid(), name: "New folder", collapsed: false }]);
-  }, []);
+  const moveToFolder = useCallback(
+    (id: string, folderId: string | null) => {
+      const next = workspaces.map((w) =>
+        w.id === id ? { ...w, folderId: folderId ?? undefined } : w,
+      );
+      setWorkspaces(next);
+      // Remove folders left with no members.
+      setFolders((fs) => fs.filter((f) => next.some((w) => w.folderId === f.id)));
+    },
+    [workspaces],
+  );
 
   // Remove a folder and ungroup its members.
   const deleteFolder = useCallback((id: string) => {
@@ -605,6 +614,7 @@ export default function Page() {
   return (
     <ZenContext.Provider value={prefs.zenMode}>
     <ToastProvider>
+      <ConfirmProvider>
       <ConsoleProvider>
       <DocumentActionsProvider
         value={{
@@ -695,7 +705,6 @@ export default function Page() {
                       onTogglePinWorkspace={togglePinWorkspace}
                       onGroupTabs={groupTabs}
                       onMoveToFolder={moveToFolder}
-                      onAddFolder={addFolder}
                       onDeleteFolder={deleteFolder}
                       onRenameFolder={renameFolder}
                       onToggleFolder={toggleFolder}
@@ -713,7 +722,6 @@ export default function Page() {
                       selectedPath={selectedPath}
                       onSelect={onSelectPath}
                       onOpenSubtree={openSubtree}
-                      onCollapse={() => collapseTree(true)}
                     />
                   )
                 }
@@ -759,6 +767,7 @@ export default function Page() {
       </SidebarToggleProvider>
       </DocumentActionsProvider>
       </ConsoleProvider>
+      </ConfirmProvider>
     </ToastProvider>
     </ZenContext.Provider>
   );
@@ -832,31 +841,29 @@ function Header({
   }
 
   return (
-    <header className="flex shrink-0 flex-col gap-2 border-b border-border bg-bg-soft px-3 py-2 sm:flex-row sm:items-center">
-      <div className="flex items-center gap-2">
+    <header className="sticky top-0 z-40 flex shrink-0 flex-col gap-2 border-b border-border bg-bg-soft/90 px-3 py-2 backdrop-blur sm:flex-row sm:items-center">
+      <div className="flex items-center gap-2.5">
         {showTreeToggle && (
           <button
             onClick={onToggleTree}
-            className="rounded-md border border-border px-2 py-1 text-sm text-gray-300 hover:bg-bg-softer lg:hidden"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-gray-300 hover:bg-bg-softer lg:hidden"
             aria-label="Toggle tree"
             title="Toggle structure tree"
           >
             ☰
           </button>
         )}
-        <span className="flex h-6 items-center justify-center rounded-md bg-accent px-1.5 font-mono text-sm font-bold tracking-tight text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-purple-500 font-mono text-sm font-bold tracking-tight text-white shadow-sm">
           {"{J}"}
         </span>
-        {!zenMode && (
-          <>
-            <span className="text-[15px] font-semibold tracking-tightish text-gray-100">
-              Kuya Json
-            </span>
-            <span className="hidden text-xs font-normal text-gray-500 lg:inline">
-              · built by ep
-            </span>
-          </>
-        )}
+        <div className="flex flex-col leading-none">
+          <span className="text-[12px] font-semibold leading-none tracking-tightish text-gray-100">
+            Kuya Json
+          </span>
+          <span className="mt-0.5 text-[6px] font-normal leading-none text-gray-500">
+            built by ep
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 sm:ml-auto">
@@ -874,7 +881,7 @@ function Header({
                 }`}
               >
                 <t.icon size={15} />
-                {!zenMode && t.label}
+                {t.label}
               </button>
             </Tooltip>
           ))}
