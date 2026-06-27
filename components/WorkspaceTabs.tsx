@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Pin, PinOff, X, Trash2, Braces, Folder as FolderIcon, Layers, Columns2, PanelLeft, PanelRight, Search } from "lucide-react";
 import type { Workspace, Folder } from "@/lib/persist";
 import { useConfirm } from "./ConfirmDialog";
+import { FOLDER_COLORS, DEFAULT_FOLDER_COLOR } from "@/lib/folderColors";
 
 interface Props {
   workspaces: Workspace[];
@@ -22,6 +23,7 @@ interface Props {
   onDeleteFolder?: (id: string) => void;
   onRenameFolder?: (id: string, name: string) => void;
   onToggleFolder?: (id: string) => void;
+  onSetFolderColor?: (id: string, color: string) => void;
   /** Open this file in the right editor group (Explorer "open to the side"). */
   onOpenSide?: (id: string) => void;
   /** Which pane(s) each file is open in (Explorer side indicator). */
@@ -47,6 +49,7 @@ export default function WorkspaceTabs({
   onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
+  onSetFolderColor,
   onOpenSide,
   openSides,
   editorTabs,
@@ -63,6 +66,11 @@ export default function WorkspaceTabs({
   const [dragPos, setDragPos] = useState<"before" | "after" | "group">("group");
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
   const [query, setQuery] = useState("");
+  const [colorMenu, setColorMenu] = useState<{
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const dragId = useRef<string | null>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +118,14 @@ export default function WorkspaceTabs({
     return () => ro.disconnect();
   }, [ordered.length]);
 
+  // Close the folder color menu on outside click.
+  useEffect(() => {
+    if (!colorMenu) return;
+    const onDown = () => setColorMenu(null);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [colorMenu]);
+
   // Close the overflow dropdown on outside click.
   useEffect(() => {
     if (!menuOpen) return;
@@ -119,6 +135,28 @@ export default function WorkspaceTabs({
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [menuOpen]);
+
+  // Folder color picker (shown on right-click, in both orientations).
+  const colorMenuEl = colorMenu && (
+    <div
+      className="fixed z-50 flex gap-1 rounded-md border border-border bg-bg-soft p-1.5 shadow-lg"
+      style={{ left: colorMenu.x, top: colorMenu.y }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {FOLDER_COLORS.map((c) => (
+        <button
+          key={c}
+          onClick={() => {
+            onSetFolderColor?.(colorMenu.id, c);
+            setColorMenu(null);
+          }}
+          title={c}
+          className="h-4 w-4 rounded-full border border-black/20 transition-transform hover:scale-110"
+          style={{ backgroundColor: c }}
+        />
+      ))}
+    </div>
+  );
 
   function startRename(w: Workspace) {
     setEditingId(w.id);
@@ -369,6 +407,7 @@ export default function WorkspaceTabs({
             );
             if (q && members.length === 0) return null;
             const over = dragOver === `folder:${f.id}`;
+            const color = f.color ?? DEFAULT_FOLDER_COLOR;
             return (
               <div key={f.id}>
                 <div
@@ -388,14 +427,18 @@ export default function WorkspaceTabs({
                   }}
                   onClick={() => onToggleFolder?.(f.id)}
                   onDoubleClick={() => startRenameFolder(f)}
-                  title="Click to collapse · double-click to rename"
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setColorMenu({ id: f.id, x: e.clientX, y: e.clientY });
+                  }}
+                  title="Click to collapse · double-click to rename · right-click for color"
                   className={`group flex cursor-pointer items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-300 hover:bg-bg-soft ${
                     over ? "ring-1 ring-inset ring-accent" : ""
                   }`}
                 >
                   {f.collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
                   <span className="relative flex shrink-0 items-center justify-center">
-                    <FolderIcon size={18} className="fill-current text-amber-500" />
+                    <FolderIcon size={18} className="fill-current" style={{ color }} />
                     <span
                       className="pointer-events-none absolute text-[8px] font-bold text-white"
                       style={{
@@ -449,6 +492,7 @@ export default function WorkspaceTabs({
 
           {looseRest.map((w) => tabRow(w, false))}
         </div>
+        {colorMenuEl}
       </div>
     );
   }
@@ -601,52 +645,70 @@ export default function WorkspaceTabs({
         className="flex flex-1 items-end gap-1 overflow-x-auto overflow-y-hidden px-2 pt-1.5"
       >
         {hLoose.map(hTab)}
-        {hFolders.map(({ f, members }) => (
-          <div
-            key={f.id}
-            onDragOver={(e) => {
-              e.preventDefault();
-              if (dragId.current) setDragOver(`folder:${f.id}`);
-            }}
-            onDragLeave={() =>
-              setDragOver((d) => (d === `folder:${f.id}` ? null : d))
-            }
-            onDrop={(e) => {
-              e.preventDefault();
-              const d = dragId.current;
-              setDragOver(null);
-              if (d) onMoveToFolder?.(d, f.id);
-            }}
-            title={f.name}
-            className={`flex items-end gap-0.5 self-stretch rounded-t-lg border-x border-t border-amber-500/40 bg-amber-500/5 px-1 ${
-              dragOver === `folder:${f.id}` ? "ring-1 ring-inset ring-accent" : ""
-            }`}
-          >
-            <span
-              onDoubleClick={() => startRenameFolderH(f)}
-              className="flex items-center gap-1 self-center px-1 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+        {hFolders.map(({ f, members }) => {
+          const color = f.color ?? DEFAULT_FOLDER_COLOR;
+          return (
+            <div
+              key={f.id}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dragId.current) setDragOver(`folder:${f.id}`);
+              }}
+              onDragLeave={() =>
+                setDragOver((d) => (d === `folder:${f.id}` ? null : d))
+              }
+              onDrop={(e) => {
+                e.preventDefault();
+                const d = dragId.current;
+                setDragOver(null);
+                if (d) onMoveToFolder?.(d, f.id);
+              }}
+              title={f.name}
+              style={{ borderColor: `${color}66`, backgroundColor: `${color}14` }}
+              className={`flex items-end gap-0.5 self-stretch rounded-t-lg border-x border-t px-1 ${
+                dragOver === `folder:${f.id}` ? "ring-1 ring-inset ring-accent" : ""
+              }`}
             >
-              <FolderIcon size={11} className="fill-current" />
-              {editingFolderId === f.id ? (
-                <input
-                  ref={folderInputRef}
-                  value={folderDraft}
-                  onChange={(e) => setFolderDraft(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  onBlur={commitFolderH}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitFolderH();
-                    if (e.key === "Escape") setEditingFolderId(null);
-                  }}
-                  className="w-20 rounded border border-accent bg-bg px-1 text-[10px] text-gray-100 focus:outline-none"
-                />
-              ) : (
-                <span className="max-w-[90px] truncate">{f.name}</span>
-              )}
-            </span>
-            {members.map(hTab)}
-          </div>
-        ))}
+              <span
+                onClick={() => onToggleFolder?.(f.id)}
+                onDoubleClick={() => startRenameFolderH(f)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setColorMenu({ id: f.id, x: e.clientX, y: e.clientY });
+                }}
+                title="Click to collapse · double-click to rename · right-click for color"
+                style={{ color }}
+                className="flex cursor-pointer items-center gap-1 self-center px-1 text-[10px] font-medium"
+              >
+                {f.collapsed ? (
+                  <ChevronRight size={11} />
+                ) : (
+                  <FolderIcon size={11} className="fill-current" />
+                )}
+                {editingFolderId === f.id ? (
+                  <input
+                    ref={folderInputRef}
+                    value={folderDraft}
+                    onChange={(e) => setFolderDraft(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onBlur={commitFolderH}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitFolderH();
+                      if (e.key === "Escape") setEditingFolderId(null);
+                    }}
+                    className="w-20 rounded border border-accent bg-bg px-1 text-[10px] text-gray-100 focus:outline-none"
+                  />
+                ) : (
+                  <span className="max-w-[90px] truncate">{f.name}</span>
+                )}
+                {f.collapsed && (
+                  <span className="tabular-nums opacity-70">{members.length}</span>
+                )}
+              </span>
+              {!f.collapsed && members.map(hTab)}
+            </div>
+          );
+        })}
         <button
           onClick={() => onAdd()}
           title="New workspace"
@@ -709,6 +771,8 @@ export default function WorkspaceTabs({
           )}
         </div>
       )}
+
+      {colorMenuEl}
     </div>
   );
 }

@@ -23,6 +23,8 @@ interface Props {
   selectedPath?: string | null;
   onSelectPath?: (path: string) => void;
   onDeselect?: () => void;
+  /** Cursor moved in the editor — gives the character offset. */
+  onCursor?: (offset: number) => void;
   // Workspace tab bar
   workspaces: Workspace[];
   activeId: string;
@@ -38,6 +40,8 @@ interface Props {
   onGroupTabs?: (dragId: string, targetId: string) => void;
   onMoveToFolder?: (id: string, folderId: string | null) => void;
   onRenameFolder?: (id: string, name: string) => void;
+  onToggleFolder?: (id: string) => void;
+  onSetFolderColor?: (id: string, color: string) => void;
   onReorder?: (dragId: string, targetId: string, before: boolean) => void;
 }
 
@@ -54,6 +58,7 @@ export default function InputPanel({
   selectedPath,
   onSelectPath,
   onDeselect,
+  onCursor,
   workspaces,
   activeId,
   onSwitchWorkspace,
@@ -66,6 +71,8 @@ export default function InputPanel({
   onGroupTabs,
   onMoveToFolder,
   onRenameFolder,
+  onToggleFolder,
+  onSetFolderColor,
   onReorder,
 }: Props) {
   const [dragging, setDragging] = useState(false);
@@ -145,6 +152,8 @@ export default function InputPanel({
             onGroupTabs={onGroupTabs}
             onMoveToFolder={onMoveToFolder}
             onRenameFolder={onRenameFolder}
+            onToggleFolder={onToggleFolder}
+            onSetFolderColor={onSetFolderColor}
             onReorder={onReorder}
           />
         </div>
@@ -157,7 +166,10 @@ export default function InputPanel({
           value={value}
           onChange={onChange}
           fontSize={fontSize}
-          onUserSelect={onDeselect}
+          onUserSelect={(offset) => {
+            if (onCursor) onCursor(offset);
+            else onDeselect?.();
+          }}
           placeholder=""
         />
         {value.trim() === "" && (
@@ -182,8 +194,9 @@ export default function InputPanel({
         onFocusRange={(from, to) => editorRef?.current?.focusRange(from, to)}
       />
 
-      {/* Breadcrumbs for the selected node (hidden when nothing is selected) */}
-      {selectedPath && onSelectPath && (
+      {/* Breadcrumbs for the selected node (hidden when nothing or only the
+          root is selected) */}
+      {selectedPath && selectedPath !== "$" && onSelectPath && (
         <Breadcrumbs path={selectedPath} onSelect={onSelectPath} />
       )}
 

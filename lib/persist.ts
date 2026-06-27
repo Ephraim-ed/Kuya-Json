@@ -14,6 +14,8 @@ export interface Folder {
   id: string;
   name: string;
   collapsed?: boolean;
+  /** Hex color for the group label/border. */
+  color?: string;
 }
 
 /** An editor group (pane): its own ordered open editors and active one. */

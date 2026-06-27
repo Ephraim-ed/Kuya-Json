@@ -34,6 +34,7 @@ import { TOOLS } from "@/components/tools/registry";
 import type { ToolId } from "@/components/tools/types";
 import { useHistory } from "@/lib/history";
 import { usePreferences } from "@/lib/usePreferences";
+import { nextFolderColor } from "@/lib/folderColors";
 import { locateAll } from "@/lib/json/locate";
 import { validate } from "@/lib/json/validate";
 import { JSONPath } from "jsonpath-plus";
@@ -125,6 +126,25 @@ export default function Page() {
       const range = locations.get(path);
       if (range) inputEditor.current?.focusRange(range.from, range.to);
       setMobileTreeOpen(false);
+    },
+    [locations],
+  );
+
+  // Editor cursor moved → show the JSON path (breadcrumbs) at that offset.
+  const onEditorCursor = useCallback(
+    (offset: number) => {
+      let bestPath: string | null = null;
+      let bestSize = Infinity;
+      for (const [path, r] of locations) {
+        if (offset >= r.from && offset <= r.to) {
+          const size = r.to - r.from;
+          if (size < bestSize) {
+            bestSize = size;
+            bestPath = path;
+          }
+        }
+      }
+      setSelectedPath(bestPath);
     },
     [locations],
   );
@@ -447,7 +467,12 @@ export default function Page() {
       let newFolder: Folder | null = null;
       if (!folderId) {
         folderId = uuid();
-        newFolder = { id: folderId, name: "New folder", collapsed: false };
+        newFolder = {
+          id: folderId,
+          name: "New folder",
+          collapsed: false,
+          color: nextFolderColor(folders.map((f) => f.color)),
+        };
       }
       const next = workspaces.map((w) =>
         w.id === dragId
@@ -463,7 +488,7 @@ export default function Page() {
         return withNew.filter((f) => next.some((w) => w.folderId === f.id));
       });
     },
-    [workspaces],
+    [workspaces, folders],
   );
 
   // Move a tab into a folder, or out of any folder (folderId = null).
@@ -499,6 +524,10 @@ export default function Page() {
     );
   }, []);
 
+  const setFolderColor = useCallback((id: string, color: string) => {
+    setFolders((fs) => fs.map((f) => (f.id === id ? { ...f, color } : f)));
+  }, []);
+
   // The open editors of each group, in tab order.
   const groupWorkspaces = (g: number): Workspace[] => {
     const grp = groups[g];
@@ -531,6 +560,7 @@ export default function Page() {
         selectedPath={selectedPath}
         onSelectPath={onSelectPath}
         onDeselect={() => setSelectedPath(null)}
+        onCursor={onEditorCursor}
         workspaces={
           explorerActive
             ? groupWorkspaces(0)
@@ -553,6 +583,8 @@ export default function Page() {
         onGroupTabs={groupTabs}
         onMoveToFolder={moveToFolder}
         onRenameFolder={renameFolder}
+        onToggleFolder={toggleFolder}
+        onSetFolderColor={setFolderColor}
         onReorder={reorderWorkspace}
       />
     </div>
@@ -708,6 +740,7 @@ export default function Page() {
                       onDeleteFolder={deleteFolder}
                       onRenameFolder={renameFolder}
                       onToggleFolder={toggleFolder}
+                      onSetFolderColor={setFolderColor}
                       onOpenSide={(id) => openInGroup(id, 1)}
                       openSides={openSides}
                       input={history.value}
@@ -853,14 +886,14 @@ function Header({
             ☰
           </button>
         )}
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-purple-500 font-mono text-sm font-bold tracking-tight text-white shadow-sm">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500 font-mono text-sm font-bold tracking-tight text-white shadow-sm">
           {"{J}"}
         </span>
-        <div className="flex flex-col leading-none">
-          <span className="text-[12px] font-semibold leading-none tracking-tightish text-gray-100">
+        <div className="flex h-7 flex-col justify-center leading-none">
+          <span className="text-[15px] font-semibold leading-none tracking-tightish text-gray-100">
             Kuya Json
           </span>
-          <span className="mt-0.5 text-[6px] font-normal leading-none text-gray-500">
+          <span className="mt-0.5 text-[9px] font-normal leading-none text-gray-500">
             built by ep
           </span>
         </div>

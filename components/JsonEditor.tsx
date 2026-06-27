@@ -56,8 +56,8 @@ interface Props {
   language?: "json" | "text";
   /** Editor font size in px (zoom). */
   fontSize?: number;
-  /** Fired when the user (not code) changes the selection/cursor. */
-  onUserSelect?: () => void;
+  /** Fired when the user (not code) moves the cursor; gives the head offset. */
+  onUserSelect?: (offset: number) => void;
 }
 
 const wrap = EditorView.lineWrapping;
@@ -317,7 +317,7 @@ const JsonEditor = forwardRef<JsonEditorHandle, Props>(function JsonEditor(
           u.selectionSet &&
           u.transactions.some((t) => t.isUserEvent("select"))
         ) {
-          onUserSelectRef.current?.();
+          onUserSelectRef.current?.(u.state.selection.main.head);
         }
       }),
     ];

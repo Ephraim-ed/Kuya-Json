@@ -22,6 +22,7 @@ interface Props {
   onDeleteFolder: (id: string) => void;
   onRenameFolder: (id: string, name: string) => void;
   onToggleFolder: (id: string) => void;
+  onSetFolderColor: (id: string, color: string) => void;
   onOpenSide: (id: string) => void;
   openSides: Record<string, "left" | "right" | "both">;
   // Tree props
@@ -52,6 +53,7 @@ export default function SidebarPanel({
   onDeleteFolder,
   onRenameFolder,
   onToggleFolder,
+  onSetFolderColor,
   onOpenSide,
   openSides,
   input,
@@ -78,6 +80,7 @@ export default function SidebarPanel({
       onDeleteFolder={onDeleteFolder}
       onRenameFolder={onRenameFolder}
       onToggleFolder={onToggleFolder}
+      onSetFolderColor={onSetFolderColor}
       onOpenSide={onOpenSide}
       openSides={openSides}
     />

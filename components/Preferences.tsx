@@ -10,7 +10,9 @@ import {
   Moon,
   Archive,
   ArchiveRestore,
+  FlaskConical,
 } from "lucide-react";
+import { SAMPLE_JSON } from "@/lib/sample";
 import { Switch } from "./ui";
 import { useTheme } from "./theme";
 import { useDocumentActions } from "./DocumentActions";
@@ -160,6 +162,16 @@ export default function Preferences({
           >
             <Upload size={14} className="text-gray-400" />
             Load…
+          </button>
+          <button
+            onClick={() => {
+              doc?.onReset(SAMPLE_JSON);
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-sm text-gray-300 hover:bg-bg-softer"
+          >
+            <FlaskConical size={14} className="text-gray-400" />
+            Load sample
           </button>
           <button
             onClick={exportBackup}
