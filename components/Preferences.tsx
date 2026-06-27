@@ -266,19 +266,17 @@ function ThemeSwitch({ dark, onToggle }: { dark: boolean; onToggle: () => void }
       aria-label="Toggle dark mode"
       onClick={onToggle}
       className={`inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${
-        dark ? "bg-blue-500" : "bg-yellow-400"
+        dark ? "bg-gray-700" : "bg-bg-softer"
       }`}
     >
       <span
-        className={`flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-lg transition-transform ${
-          dark ? "translate-x-4" : "translate-x-0"
+        className={`flex h-4 w-4 items-center justify-center rounded-full transition-transform ${
+          dark
+            ? "translate-x-4 bg-gray-900 text-gray-100"
+            : "translate-x-0 bg-white text-gray-800"
         }`}
       >
-        {dark ? (
-          <Moon size={9} className="text-blue-500" />
-        ) : (
-          <Sun size={9} className="text-amber-500" />
-        )}
+        {dark ? <Moon size={9} /> : <Sun size={9} />}
       </span>
     </button>
   );

@@ -124,8 +124,8 @@ export default function SidebarPanel({
             onClick={() => setTab(t)}
             className={`flex h-7 items-center gap-1.5 rounded-t-lg px-3 text-xs font-medium capitalize transition-colors ${
               tab === t
-                ? "ctab-active z-10 -mb-px bg-bg-soft text-gray-100"
-                : "bg-transparent text-gray-400 hover:bg-bg-soft hover:text-gray-200"
+                ? "z-10 -mb-px border border-b-0 border-border bg-bg-soft text-gray-100"
+                : "border border-transparent bg-transparent text-gray-400 hover:bg-bg-soft hover:text-gray-200"
             }`}
           >
             {t === "workspaces" ? <Layers size={13} /> : <ListTree size={13} />}

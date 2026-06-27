@@ -21,17 +21,24 @@ export function useHistory(initial: string) {
   // Track the latest present to avoid pushing duplicates.
   const presentRef = useRef(initial);
   presentRef.current = state.present;
+  // Coalesce rapid edits (typing) into a single undo step.
+  const lastEdit = useRef(0);
 
   const set = useCallback((value: string) => {
     setState((s) => {
       if (value === s.present) return s;
-      const past = [...s.past, s.present].slice(-LIMIT);
+      const now = Date.now();
+      // Within the coalesce window, update present without a new undo entry.
+      const coalesce = now - lastEdit.current < 500 && s.past.length > 0;
+      lastEdit.current = now;
+      const past = coalesce ? s.past : [...s.past, s.present].slice(-LIMIT);
       return { past, present: value, future: [] };
     });
   }, []);
 
-  /** Replace the present value without creating an undo step (e.g. live typing). */
+  /** Replace the present value without creating an undo step (programmatic). */
   const replace = useCallback((value: string) => {
+    lastEdit.current = 0;
     setState((s) => ({ ...s, present: value }));
   }, []);
 
@@ -60,6 +67,7 @@ export function useHistory(initial: string) {
   }, []);
 
   const reset = useCallback((value: string) => {
+    lastEdit.current = 0;
     setState({ past: [], present: value, future: [] });
   }, []);
 

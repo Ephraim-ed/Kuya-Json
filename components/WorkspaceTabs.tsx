@@ -213,7 +213,8 @@ export default function WorkspaceTabs({
     }
 
     const tabRow = (w: Workspace, inFolder: boolean) => {
-      const active = w.id === activeId;
+      // Highlight the active editor of either pane (open on the left/right/both).
+      const active = w.id === activeId || !!openSides?.[w.id];
       return (
         <div
           key={w.id}
@@ -243,7 +244,7 @@ export default function WorkspaceTabs({
           onClick={() => onSwitch(w.id)}
           onDoubleClick={() => startRename(w)}
           title={`${w.name} — drag onto another tab to group`}
-          className={`group flex cursor-pointer items-center gap-1.5 py-1.5 text-xs transition-colors ${
+          className={`group flex cursor-pointer items-center gap-1.5 py-1 text-xs transition-colors ${
             inFolder ? "pl-7 pr-2" : "px-2"
           } ${
             active
@@ -380,22 +381,18 @@ export default function WorkspaceTabs({
               <div
                 onClick={() => setPinnedCollapsed((c) => !c)}
                 title="Pinned"
-                className="flex cursor-pointer items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-300 hover:bg-bg-soft"
+                className="flex cursor-pointer items-center gap-1 px-2 py-1 text-xs font-medium text-gray-300 hover:bg-bg-soft"
               >
                 {pinnedCollapsed ? (
                   <ChevronRight size={12} />
                 ) : (
                   <ChevronDown size={12} />
                 )}
-                <Pin size={13} className="shrink-0 fill-current text-amber-500" />
-                <span className="flex flex-1 items-center gap-1.5 truncate">
-                  Pinned
-                  <span className="text-[10px] tabular-nums text-gray-500">
-                    {loosePinned.length}
-                  </span>
-                </span>
+                <Pin size={13} className="shrink-0 fill-current text-red-500" />
+                <span className="flex-1 truncate">Pinned</span>
               </div>
               {!pinnedCollapsed && loosePinned.map((w) => tabRow(w, true))}
+              <div className="mx-2 my-1 border-t border-border" />
             </div>
           )}
 
@@ -430,7 +427,7 @@ export default function WorkspaceTabs({
                     setColorMenu({ id: f.id, x: e.clientX, y: e.clientY });
                   }}
                   title="Click to collapse · double-click to rename · right-click for color"
-                  className={`group flex cursor-pointer items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-300 hover:bg-bg-soft ${
+                  className={`group flex cursor-pointer items-center gap-1 px-2 py-1 text-xs font-medium text-gray-300 hover:bg-bg-soft ${
                     over ? "ring-1 ring-inset ring-accent" : ""
                   }`}
                 >

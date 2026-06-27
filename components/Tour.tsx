@@ -25,8 +25,8 @@ interface Step {
 const STEPS: Step[] = [
   {
     id: "welcome",
-    title: "Welcome to Kuya Json",
-    desc: "A privacy-first JSON toolkit — everything runs in your browser, nothing is uploaded. Here's a quick tour.",
+    title: "Hi, I'm your Kuya Json! 👋",
+    desc: "I'm your friendly JSON sidekick. I can format, validate, repair, explore, convert and tidy up your JSON — all right here in your browser, nothing ever uploaded. Come on, let me show you around!",
   },
   {
     id: "tool-format",
@@ -173,9 +173,11 @@ export default function Tour({
   }, [open, isLast]);
 
   // Position the coachmark near the target (or centered when there is none).
-  const cardStyle = useMemo<CSSProperties>(() => {
+  // `centered` steps use a flex wrapper (CSS transform centering would be
+  // clobbered by framer-motion's animated transform).
+  const placement = useMemo<{ centered: boolean; style: CSSProperties }>(() => {
     if (typeof window === "undefined" || !rect) {
-      return { left: "50%", top: "50%", transform: "translate(-50%, -50%)" };
+      return { centered: true, style: {} };
     }
     const m = 14;
     const vw = window.innerWidth;
@@ -185,11 +187,8 @@ export default function Tour({
     const tall = rect.height > vh * 0.6;
     const wide = rect.width > vw * 0.6;
 
-    // A target that dominates the screen (e.g. the editor) — center the card
-    // over it; the spotlight already shows what's highlighted.
-    if (tall && wide) {
-      return { left: "50%", top: "50%", transform: "translate(-50%, -50%)" };
-    }
+    // A target that dominates the screen (e.g. the editor) — center the card.
+    if (tall && wide) return { centered: true, style: {} };
 
     // Tall narrow targets (e.g. the full-height sidebar) have no room above/
     // below — place the card to the side that has more room.
@@ -198,19 +197,64 @@ export default function Tour({
       const rawLeft = onLeft ? rect.right + m : rect.left - CARD_W - m;
       const left = Math.min(Math.max(12, rawLeft), vw - CARD_W - 12);
       const top = Math.min(Math.max(12, rect.top + rect.height / 2 - 120), vh - 260);
-      return { left, top };
+      return { centered: false, style: { left, top } };
     }
 
     const left = Math.min(
       Math.max(12, rect.left + rect.width / 2 - CARD_W / 2),
       vw - CARD_W - 12,
     );
-    return spaceBelow > 230
-      ? { left, top: rect.bottom + m }
-      : { left, bottom: vh - rect.top + m };
+    return {
+      centered: false,
+      style:
+        spaceBelow > 230
+          ? { left, top: rect.bottom + m }
+          : { left, bottom: vh - rect.top + m },
+    };
   }, [rect]);
 
   if (!open || typeof document === "undefined") return null;
+
+  const cardContent = (
+    <>
+      {(step.id === "welcome" || step.id === "theme") && (
+        <div className="mb-2 flex justify-center">
+          <KuyaSprite />
+        </div>
+      )}
+      <h2
+        className="text-base font-semibold text-gray-100"
+        style={step.id === "zen" ? { fontFamily: ZEN_FONT } : undefined}
+      >
+        {step.title}
+      </h2>
+      <p className="mt-1 text-sm leading-relaxed text-gray-400">{step.desc}</p>
+      {step.id === "theme" && <DayNightToggle />}
+
+      <div className="mt-4 flex justify-center gap-1.5">
+        {STEPS.map((_, n) => (
+          <span
+            key={n}
+            className={`h-1.5 rounded-full transition-all ${
+              n === i ? "w-5 bg-accent" : "w-1.5 bg-border"
+            }`}
+          />
+        ))}
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          onClick={onClose}
+          className="mr-auto px-1 text-xs text-gray-500 hover:text-gray-300"
+        >
+          Skip
+        </button>
+        {i > 0 && <Button onClick={back}>Back</Button>}
+        <Button variant="primary" onClick={next}>
+          {isLast ? "Get started" : "Next"}
+        </Button>
+      </div>
+    </>
+  );
 
   return createPortal(
     <div className="fixed inset-0 z-[70]">
@@ -241,50 +285,25 @@ export default function Tour({
       <AnimatePresence mode="wait">
         <motion.div
           key={step.id}
-          style={cardStyle}
-          className="pointer-events-auto absolute w-80 rounded-xl border border-border bg-bg-soft p-4 shadow-2xl"
+          style={placement.centered ? undefined : placement.style}
+          className={
+            placement.centered
+              ? "pointer-events-none absolute inset-0 flex items-center justify-center p-4"
+              : "pointer-events-auto absolute w-80 rounded-xl border border-border bg-bg-soft p-4 shadow-2xl"
+          }
           initial={{ opacity: 0, y: 8, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -8, scale: 0.98 }}
           transition={{ duration: 0.18 }}
           onClick={(e) => e.stopPropagation()}
         >
-          {(step.id === "welcome" || step.id === "theme") && (
-            <div className="mb-2 flex justify-center">
-              <KuyaSprite />
+          {placement.centered ? (
+            <div className="pointer-events-auto w-80 rounded-xl border border-border bg-bg-soft p-4 shadow-2xl">
+              {cardContent}
             </div>
+          ) : (
+            cardContent
           )}
-          <h2
-            className="text-base font-semibold text-gray-100"
-            style={step.id === "zen" ? { fontFamily: ZEN_FONT } : undefined}
-          >
-            {step.title}
-          </h2>
-          <p className="mt-1 text-sm leading-relaxed text-gray-400">{step.desc}</p>
-          {step.id === "theme" && <DayNightToggle />}
-
-          <div className="mt-4 flex justify-center gap-1.5">
-            {STEPS.map((_, n) => (
-              <span
-                key={n}
-                className={`h-1.5 rounded-full transition-all ${
-                  n === i ? "w-5 bg-accent" : "w-1.5 bg-border"
-                }`}
-              />
-            ))}
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="mr-auto px-1 text-xs text-gray-500 hover:text-gray-300"
-            >
-              Skip
-            </button>
-            {i > 0 && <Button onClick={back}>Back</Button>}
-            <Button variant="primary" onClick={next}>
-              {isLast ? "Get started" : "Next"}
-            </Button>
-          </div>
         </motion.div>
       </AnimatePresence>
     </div>,

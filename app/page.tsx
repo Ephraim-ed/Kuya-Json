@@ -592,7 +592,7 @@ export default function Page() {
       )}
       <InputPanel
         value={history.value}
-        onChange={history.replace}
+        onChange={history.set}
         onReset={history.set}
         editorRef={inputEditor}
         selectedPath={selectedPath}
@@ -649,7 +649,7 @@ export default function Page() {
             <div className="h-full min-h-0" onMouseDownCapture={() => setFocused(1)}>
               <SecondaryEditor
                 value={historyB.value}
-                onChange={historyB.replace}
+                onChange={historyB.set}
                 onReset={historyB.set}
                 workspaces={groupWorkspaces(1)}
                 activeId={rightActiveId}
@@ -752,17 +752,14 @@ export default function Page() {
           {/* Desktop: resizable [tree | workspace]; mobile: workspace only.
               Rendered via JS breakpoint so the workspace mounts exactly once. */}
           {showTree && isDesktop && !prefs.zenMode ? (
-            treeCollapsed ? (
-              // Collapsed: expand via the toolbar's sidebar button.
-              <div className="h-full">{workspace}</div>
-            ) : (
-              <Split
-                direction="horizontal"
-                initial={0.2}
-                min={0.1}
-                max={0.45}
-                storageKey="sidebar"
-                first={
+            <Split
+              direction="horizontal"
+              initial={0.2}
+              min={0.1}
+              max={0.45}
+              storageKey="sidebar"
+              collapsed={treeCollapsed}
+              first={
                   prefs.verticalTabs ? (
                     <SidebarPanel
                       workspaces={workspaces}
@@ -796,9 +793,8 @@ export default function Page() {
                     />
                   )
                 }
-                second={workspace}
-              />
-            )
+              second={workspace}
+            />
           ) : (
             <div className="h-full">{workspace}</div>
           )}

@@ -16,6 +16,8 @@ interface Props {
   max?: number;
   /** Persist the chosen fraction across reloads. */
   storageKey?: string;
+  /** Collapse the first pane (animated width → 0, gutter hidden). */
+  collapsed?: boolean;
   first: ReactNode;
   second: ReactNode;
 }
@@ -30,6 +32,7 @@ export default function Split({
   min = 0.12,
   max = 0.88,
   storageKey,
+  collapsed = false,
   first,
   second,
 }: Props) {
@@ -97,29 +100,37 @@ export default function Split({
     >
       <div
         className="min-h-0 min-w-0 overflow-hidden"
-        style={{ flexBasis: `${frac * 100}%`, flexGrow: 0, flexShrink: 0 }}
+        style={{
+          flexBasis: collapsed ? "0%" : `${frac * 100}%`,
+          flexGrow: 0,
+          flexShrink: 0,
+          transition: dragging
+            ? undefined
+            : `flex-basis 250ms ease, opacity 250ms ease`,
+          opacity: collapsed ? 0 : 1,
+        }}
       >
         {first}
       </div>
 
-      <div
-        onMouseDown={() => setDragging(true)}
-        onTouchStart={() => setDragging(true)}
-        className={`group relative shrink-0 bg-border transition-colors hover:bg-accent ${
-          horizontal
-            ? "w-px cursor-col-resize"
-            : "h-px cursor-row-resize"
-        } ${dragging ? "bg-accent" : ""}`}
-      >
-        {/* Wider invisible hit area for easier grabbing. */}
+      {!collapsed && (
         <div
-          className={`absolute ${
-            horizontal
-              ? "inset-y-0 -left-1.5 -right-1.5 cursor-col-resize"
-              : "inset-x-0 -top-1.5 -bottom-1.5 cursor-row-resize"
-          }`}
-        />
-      </div>
+          onMouseDown={() => setDragging(true)}
+          onTouchStart={() => setDragging(true)}
+          className={`group relative shrink-0 bg-border transition-colors hover:bg-accent ${
+            horizontal ? "w-px cursor-col-resize" : "h-px cursor-row-resize"
+          } ${dragging ? "bg-accent" : ""}`}
+        >
+          {/* Wider invisible hit area for easier grabbing. */}
+          <div
+            className={`absolute ${
+              horizontal
+                ? "inset-y-0 -left-1.5 -right-1.5 cursor-col-resize"
+                : "inset-x-0 -top-1.5 -bottom-1.5 cursor-row-resize"
+            }`}
+          />
+        </div>
+      )}
 
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{second}</div>
     </div>
