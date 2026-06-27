@@ -20,7 +20,7 @@ interface Props {
   folders?: Folder[];
   onGroupTabs?: (dragId: string, targetId: string) => void;
   onMoveToFolder?: (id: string, folderId: string | null) => void;
-  onDeleteFolder?: (id: string) => void;
+  onDeleteFolder?: (id: string, deleteContents?: boolean) => void;
   onRenameFolder?: (id: string, name: string) => void;
   onToggleFolder?: (id: string) => void;
   onSetFolderColor?: (id: string, color: string) => void;
@@ -72,6 +72,7 @@ export default function WorkspaceTabs({
     y: number;
   } | null>(null);
   const dragId = useRef<string | null>(null);
+  const colorMenuRef = useRef<HTMLDivElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -118,10 +119,13 @@ export default function WorkspaceTabs({
     return () => ro.disconnect();
   }, [ordered.length]);
 
-  // Close the folder color menu on outside click.
+  // Close the folder color menu on outside click (ref check — a native
+  // document listener isn't stopped by React's synthetic stopPropagation).
   useEffect(() => {
     if (!colorMenu) return;
-    const onDown = () => setColorMenu(null);
+    const onDown = (e: MouseEvent) => {
+      if (!colorMenuRef.current?.contains(e.target as Node)) setColorMenu(null);
+    };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [colorMenu]);
@@ -139,9 +143,9 @@ export default function WorkspaceTabs({
   // Folder color picker (shown on right-click, in both orientations).
   const colorMenuEl = colorMenu && (
     <div
+      ref={colorMenuRef}
       className="fixed z-50 flex gap-1 rounded-md border border-border bg-bg-soft p-1.5 shadow-lg"
       style={{ left: colorMenu.x, top: colorMenu.y }}
-      onMouseDown={(e) => e.stopPropagation()}
     >
       {FOLDER_COLORS.map((c) => (
         <button
@@ -304,7 +308,7 @@ export default function WorkspaceTabs({
           <button
             onClick={async (e) => {
               e.stopPropagation();
-              const ok = await confirm({
+              const { confirmed } = await confirm({
                 title: `Delete "${w.name}"?`,
                 description:
                   "This workspace will be permanently removed. This can't be undone.",
@@ -312,7 +316,7 @@ export default function WorkspaceTabs({
                 danger: true,
                 dontAskKey: "kuya-json:skip-delete-confirm",
               });
-              if (ok) onClose(w.id);
+              if (confirmed) onClose(w.id);
             }}
             title="Delete workspace"
             className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-red-300 ${
@@ -383,18 +387,12 @@ export default function WorkspaceTabs({
                 ) : (
                   <ChevronDown size={12} />
                 )}
-                <span className="relative flex shrink-0 items-center justify-center">
-                  <FolderIcon size={18} className="fill-current text-amber-500" />
-                  <span
-                    className="pointer-events-none absolute text-[8px] font-bold text-white"
-                    style={{ left: 0, right: 0, top: "33%", textAlign: "center", lineHeight: 1 }}
-                  >
+                <Pin size={13} className="shrink-0 fill-current text-amber-500" />
+                <span className="flex flex-1 items-center gap-1.5 truncate">
+                  Pinned
+                  <span className="text-[10px] tabular-nums text-gray-500">
                     {loosePinned.length}
                   </span>
-                </span>
-                <span className="flex flex-1 items-center gap-1 truncate">
-                  Pinned
-                  <Pin size={10} className="fill-current text-gray-500" />
                 </span>
               </div>
               {!pinnedCollapsed && loosePinned.map((w) => tabRow(w, true))}
@@ -469,17 +467,19 @@ export default function WorkspaceTabs({
                     <span className="flex-1 truncate">{f.name}</span>
                   )}
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      if (
-                        window.confirm(
-                          `Delete folder "${f.name}"? Its tabs will be kept (ungrouped).`,
-                        )
-                      ) {
-                        onDeleteFolder?.(f.id);
-                      }
+                      const { confirmed, checked } = await confirm({
+                        title: `Delete folder "${f.name}"?`,
+                        description:
+                          "By default the tabs are kept (ungrouped). Check below to delete them too.",
+                        confirmLabel: "Delete",
+                        danger: true,
+                        checkboxLabel: "Include contents (delete its tabs)",
+                      });
+                      if (confirmed) onDeleteFolder?.(f.id, checked);
                     }}
-                    title="Delete folder (keeps its tabs)"
+                    title="Delete folder"
                     className="flex h-4 w-4 items-center justify-center rounded-full text-gray-500 opacity-0 hover:bg-bg hover:text-red-300 group-hover:opacity-100"
                   >
                     <Trash2 size={11} />
@@ -602,7 +602,7 @@ export default function WorkspaceTabs({
         <button
           onClick={async (e) => {
             e.stopPropagation();
-            const ok = await confirm({
+            const { confirmed } = await confirm({
               title: `Delete "${w.name}"?`,
               description:
                 "This workspace will be permanently removed. This can't be undone.",
@@ -610,7 +610,7 @@ export default function WorkspaceTabs({
               danger: true,
               dontAskKey: "kuya-json:skip-delete-confirm",
             });
-            if (ok) onClose(w.id);
+            if (confirmed) onClose(w.id);
           }}
           title="Delete workspace"
           className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-red-300 ${

@@ -19,7 +19,7 @@ interface Props {
   onTogglePinWorkspace: (id: string) => void;
   onGroupTabs: (dragId: string, targetId: string) => void;
   onMoveToFolder: (id: string, folderId: string | null) => void;
-  onDeleteFolder: (id: string) => void;
+  onDeleteFolder: (id: string, deleteContents?: boolean) => void;
   onRenameFolder: (id: string, name: string) => void;
   onToggleFolder: (id: string) => void;
   onSetFolderColor: (id: string, color: string) => void;

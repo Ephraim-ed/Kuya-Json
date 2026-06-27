@@ -109,12 +109,14 @@ export default function Page() {
   // Explorer sidebar present (vertical tabs): editor ✕ closes; otherwise deletes.
   const explorerActive = prefs.verticalTabs && isDesktop && !prefs.zenMode;
 
-  // Which pane(s) each workspace is open in (for the Explorer side indicator).
+  // Which pane each workspace is the active (shown) editor of — for the
+  // Explorer side indicator (only the visible workspace of each pane).
   const openSides = useMemo(() => {
     const m: Record<string, "left" | "right" | "both"> = {};
-    for (const id of groups[0]?.openIds ?? []) m[id] = "left";
-    for (const id of groups[1]?.openIds ?? [])
-      m[id] = m[id] === "left" ? "both" : "right";
+    const l = groups[0]?.activeId;
+    const r = groups[1]?.activeId;
+    if (l) m[l] = "left";
+    if (r) m[r] = m[r] === "left" ? "both" : "right";
     return m;
   }, [groups]);
 
@@ -504,13 +506,49 @@ export default function Page() {
     [workspaces],
   );
 
-  // Remove a folder and ungroup its members.
-  const deleteFolder = useCallback((id: string) => {
-    setWorkspaces((ws) =>
-      ws.map((w) => (w.folderId === id ? { ...w, folderId: undefined } : w)),
-    );
-    setFolders((fs) => fs.filter((f) => f.id !== id));
-  }, []);
+  // Remove a folder. By default its members are ungrouped (kept); when
+  // `deleteContents` is true the member workspaces are deleted too.
+  const deleteFolder = useCallback(
+    (id: string, deleteContents = false) => {
+      setFolders((fs) => fs.filter((f) => f.id !== id));
+      if (!deleteContents) {
+        setWorkspaces((ws) =>
+          ws.map((w) => (w.folderId === id ? { ...w, folderId: undefined } : w)),
+        );
+        return;
+      }
+      const deleted = new Set(
+        workspaces.filter((w) => w.folderId === id).map((w) => w.id),
+      );
+      const remaining = workspaces.filter((w) => !deleted.has(w.id));
+      if (remaining.length === 0) {
+        const nid = uuid();
+        setWorkspaces([{ id: nid, name: "Workspace 1", content: "" }]);
+        setGroups([{ openIds: [nid], activeId: nid }]);
+        setFocused(0);
+        return;
+      }
+      setWorkspaces(remaining);
+      let g = groups.map((grp) => {
+        const openIds = grp.openIds.filter((x) => !deleted.has(x));
+        const activeId = deleted.has(grp.activeId)
+          ? (openIds[openIds.length - 1] ?? "")
+          : grp.activeId;
+        return { openIds, activeId };
+      });
+      if (g.length === 2) {
+        if (g[1].openIds.length === 0) {
+          g = [g[0]];
+          setFocused(0);
+        } else if (g[0].openIds.length === 0) {
+          g = [g[1]];
+          setFocused(0);
+        }
+      }
+      setGroups(g);
+    },
+    [workspaces, groups],
+  );
 
   const renameFolder = useCallback((id: string, name: string) => {
     setFolders((fs) =>

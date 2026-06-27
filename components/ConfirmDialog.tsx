@@ -19,45 +19,53 @@ interface ConfirmOptions {
   danger?: boolean;
   /** localStorage key — when set, shows a "Don't ask again" checkbox. */
   dontAskKey?: string;
+  /** A value-returning checkbox (e.g. "include contents"); its state is in `checked`. */
+  checkboxLabel?: ReactNode;
 }
 
-type ConfirmFn = (o: ConfirmOptions) => Promise<boolean>;
+interface ConfirmResult {
+  confirmed: boolean;
+  /** State of the option checkbox (don't-ask or custom). */
+  checked: boolean;
+}
 
-const Ctx = createContext<ConfirmFn>(async () => true);
+type ConfirmFn = (o: ConfirmOptions) => Promise<ConfirmResult>;
 
-/** Returns an async `confirm(options)` that resolves to true/false. */
+const Ctx = createContext<ConfirmFn>(async () => ({ confirmed: true, checked: false }));
+
+/** Returns an async `confirm(options)` resolving to `{ confirmed, checked }`. */
 export const useConfirm = () => useContext(Ctx);
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [opts, setOpts] = useState<ConfirmOptions | null>(null);
-  const [dontAsk, setDontAsk] = useState(false);
-  const resolver = useRef<((v: boolean) => void) | null>(null);
+  const [checked, setChecked] = useState(false);
+  const resolver = useRef<((v: ConfirmResult) => void) | null>(null);
 
   const confirm = useCallback<ConfirmFn>((o) => {
     if (o.dontAskKey && localStorage.getItem(o.dontAskKey) === "1") {
-      return Promise.resolve(true);
+      return Promise.resolve({ confirmed: true, checked: false });
     }
-    setDontAsk(false);
+    setChecked(false);
     setOpts(o);
-    return new Promise<boolean>((res) => {
+    return new Promise<ConfirmResult>((res) => {
       resolver.current = res;
     });
   }, []);
 
   const settle = useCallback(
-    (result: boolean) => {
-      if (result && dontAsk && opts?.dontAskKey) {
+    (confirmed: boolean) => {
+      if (confirmed && checked && opts?.dontAskKey) {
         try {
           localStorage.setItem(opts.dontAskKey, "1");
         } catch {
           /* ignore */
         }
       }
-      resolver.current?.(result);
+      resolver.current?.({ confirmed, checked });
       resolver.current = null;
       setOpts(null);
     },
-    [dontAsk, opts],
+    [checked, opts],
   );
 
   useEffect(() => {
@@ -91,15 +99,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               </p>
             )}
 
-            {opts.dontAskKey && (
+            {(opts.dontAskKey || opts.checkboxLabel) && (
               <label className="mt-4 flex cursor-pointer select-none items-center gap-2 text-xs text-gray-400">
                 <input
                   type="checkbox"
-                  checked={dontAsk}
-                  onChange={(e) => setDontAsk(e.target.checked)}
+                  checked={checked}
+                  onChange={(e) => setChecked(e.target.checked)}
                   className="h-3.5 w-3.5 cursor-pointer accent-accent"
                 />
-                Don&apos;t ask me again
+                {opts.checkboxLabel ?? "Don't ask me again"}
               </label>
             )}
 
