@@ -68,6 +68,18 @@ export default function KuyaSprite({
         {/* Salakot hat */}
         <path d="M30 50 Q60 8 90 50 Z" fill="#2f81f7" />
         <path d="M30 50 Q60 8 90 50 Z" fill="url(#kuyaHatShine)" />
+        {/* Logo on the hat */}
+        <text
+          x="60"
+          y="41"
+          textAnchor="middle"
+          fontFamily="var(--font-mono), monospace"
+          fontWeight="800"
+          fontSize="9"
+          fill="#fff"
+        >
+          {"{J}"}
+        </text>
         <ellipse cx="60" cy="50" rx="33" ry="7" fill="#4493f8" />
         <ellipse
           cx="60"
