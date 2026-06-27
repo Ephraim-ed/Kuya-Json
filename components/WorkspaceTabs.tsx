@@ -245,7 +245,7 @@ export default function WorkspaceTabs({
           onDoubleClick={() => startRename(w)}
           title={`${w.name} — drag onto another tab to group`}
           className={`group flex cursor-pointer items-center gap-1.5 py-1 text-xs transition-colors ${
-            inFolder ? "pl-7 pr-2" : "px-2"
+            inFolder ? "pl-3 pr-2" : "px-2"
           } ${
             active
               ? "bg-bg-softer text-gray-100"
@@ -391,7 +391,11 @@ export default function WorkspaceTabs({
                 <Pin size={13} className="shrink-0 fill-current text-red-500" />
                 <span className="flex-1 truncate">Pinned</span>
               </div>
-              {!pinnedCollapsed && loosePinned.map((w) => tabRow(w, true))}
+              {!pinnedCollapsed && (
+                <div className="ml-[15px] border-l border-border">
+                  {loosePinned.map((w) => tabRow(w, true))}
+                </div>
+              )}
               <div className="mx-2 my-1 border-t border-border" />
             </div>
           )}
@@ -482,7 +486,14 @@ export default function WorkspaceTabs({
                     <Trash2 size={11} />
                   </button>
                 </div>
-                {!f.collapsed && members.map((w) => tabRow(w, true))}
+                {!f.collapsed && (
+                  <div
+                    className="ml-[15px] border-l"
+                    style={{ borderColor: `${color}66` }}
+                  >
+                    {members.map((w) => tabRow(w, true))}
+                  </div>
+                )}
               </div>
             );
           })}
