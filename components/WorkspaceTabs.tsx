@@ -383,11 +383,12 @@ export default function WorkspaceTabs({
                 title="Pinned"
                 className="flex cursor-pointer items-center gap-1 px-2 py-1 text-xs font-medium text-gray-300 hover:bg-bg-soft"
               >
-                {pinnedCollapsed ? (
-                  <ChevronRight size={12} />
-                ) : (
-                  <ChevronDown size={12} />
-                )}
+                <ChevronRight
+                  size={12}
+                  className={`shrink-0 transition-transform duration-200 ${
+                    pinnedCollapsed ? "" : "rotate-90"
+                  }`}
+                />
                 <Pin size={13} className="shrink-0 fill-current text-red-500" />
                 <span className="flex-1 truncate">Pinned</span>
               </div>
@@ -435,7 +436,12 @@ export default function WorkspaceTabs({
                     over ? "ring-1 ring-inset ring-accent" : ""
                   }`}
                 >
-                  {f.collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                  <ChevronRight
+                    size={12}
+                    className={`shrink-0 transition-transform duration-200 ${
+                      f.collapsed ? "" : "rotate-90"
+                    }`}
+                  />
                   <span className="relative flex shrink-0 items-center justify-center">
                     <FolderIcon size={18} className="fill-current" style={{ color }} />
                     <span

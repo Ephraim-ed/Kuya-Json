@@ -69,7 +69,13 @@ function Node({
             className="w-4 shrink-0 text-gray-500 hover:text-gray-200"
             aria-label={expanded ? "Collapse" : "Expand"}
           >
-            {expanded ? "▾" : "▸"}
+            <span
+              className={`inline-block transition-transform duration-200 ${
+                expanded ? "rotate-90" : ""
+              }`}
+            >
+              ▸
+            </span>
           </button>
         ) : (
           <span className="w-4 shrink-0" />
