@@ -23,6 +23,10 @@ function buildTips(mod: string): ReactNode[] {
       press <Kbd>{mod} /</Kbd> to comment or uncomment lines
     </>,
     <>
+      press <Kbd>{mod} ⇧ K</Kbd> to comment and <Kbd>{mod} ⇧ U</Kbd> to uncomment
+      the selected lines
+    </>,
+    <>
       press <Kbd>{mod} F</Kbd> to find in the document
     </>,
     <>

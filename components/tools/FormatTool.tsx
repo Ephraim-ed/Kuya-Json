@@ -85,6 +85,8 @@ export default function FormatTool({ input, setInput, editor }: ToolProps) {
   // comments, so auto-format runs even when the document has `--` comments.
   useEffect(() => {
     if (!autoUnescape && !autoRepair && !autoFormat) return;
+    // Nothing typed yet: don't "repair" an empty workspace into an error.
+    if (input.trim() === "") return;
     const id = window.setTimeout(() => {
       let text = input;
       const applied: string[] = [];

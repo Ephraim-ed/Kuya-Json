@@ -265,13 +265,22 @@ const commentTheme = EditorView.baseTheme({
   "&dark .cm-jsonc-comment": { color: "#5c6370 !important" },
 });
 
-const commentKeymap = keymap.of([
-  { key: "Mod-/", run: toggleLineComment },
-  { key: "Mod-k Mod-c", run: commentLines },
-  { key: "Mod-k c", run: commentLines },
-  { key: "Mod-k Mod-u", run: uncommentLines },
-  { key: "Mod-k u", run: uncommentLines },
-]);
+// High precedence: Mod-Shift-k is CodeMirror's default "delete line".
+const commentKeymap = Prec.high(
+  keymap.of([
+    { key: "Mod-/", run: toggleLineComment },
+    { key: "Mod-k Mod-c", run: commentLines },
+    { key: "Mod-k c", run: commentLines },
+    { key: "Mod-k Mod-u", run: uncommentLines },
+    { key: "Mod-k u", run: uncommentLines },
+    // Comment / uncomment selected lines. Ctrl is bound too so it also
+    // works on macOS, where Mod is Cmd.
+    { key: "Mod-Shift-k", run: commentLines, preventDefault: true },
+    { key: "Ctrl-Shift-k", run: commentLines, preventDefault: true },
+    { key: "Mod-Shift-u", run: uncommentLines, preventDefault: true },
+    { key: "Ctrl-Shift-u", run: uncommentLines, preventDefault: true },
+  ]),
+);
 
 const JsonEditor = forwardRef<JsonEditorHandle, Props>(function JsonEditor(
   {
