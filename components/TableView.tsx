@@ -156,9 +156,9 @@ export default function TableView({
                       <span className="truncate">{h || " "}</span>
                       {sort?.col === i &&
                         (sort.dir === "asc" ? (
-                          <ChevronUp size={12} className="shrink-0 text-accent" />
+                          <ChevronUp size={12} className="shrink-0 text-accent-fg" />
                         ) : (
-                          <ChevronDown size={12} className="shrink-0 text-accent" />
+                          <ChevronDown size={12} className="shrink-0 text-accent-fg" />
                         ))}
                     </button>
                     <ColumnFilter
@@ -242,7 +242,7 @@ function ColumnFilter({
         <button
           title="Filter column"
           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-bg-softer ${
-            active ? "text-accent" : "text-gray-500 hover:text-gray-300"
+            active ? "text-accent-fg" : "text-gray-500 hover:text-gray-300"
           }`}
         >
           <MoreVertical size={14} />
@@ -256,7 +256,7 @@ function ColumnFilter({
           placeholder="Search values…"
           className="w-full rounded border border-border bg-bg px-2 py-1 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent"
         />
-        <div className="mt-1.5 flex items-center justify-between text-[11px]">
+        <div className="mt-1.5 flex items-center justify-between text-2xs">
           <button
             onClick={() => onChange(undefined)}
             className="text-gray-500 hover:text-gray-200"

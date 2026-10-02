@@ -62,14 +62,14 @@ export default function EditorDropZones({
               side === "left" ? "bg-accent/20" : "bg-black/10"
             }`}
           >
-            <PanelLeft size={26} className="text-accent" />
+            <PanelLeft size={26} className="text-accent-fg" />
           </div>
           <div
             className={`flex flex-1 items-center justify-center transition-colors ${
               side === "right" ? "bg-accent/20" : "bg-black/10"
             }`}
           >
-            <PanelRight size={26} className="text-accent" />
+            <PanelRight size={26} className="text-accent-fg" />
           </div>
         </div>
       )}

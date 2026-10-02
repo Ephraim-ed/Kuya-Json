@@ -19,8 +19,26 @@ const config: Config = {
           DEFAULT: "rgb(var(--border) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "#2f81f7",
-          hover: "#4493f8",
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          hover: "rgb(var(--accent-hover) / <alpha-value>)",
+          // Accent-coloured text/icons on surfaces (fills use DEFAULT).
+          fg: "rgb(var(--accent-fg) / <alpha-value>)",
+        },
+        // Status colours, themed in globals.css
+        danger: {
+          DEFAULT: "rgb(var(--danger) / <alpha-value>)",
+          bg: "rgb(var(--danger-bg) / <alpha-value>)",
+          border: "rgb(var(--danger-border) / <alpha-value>)",
+        },
+        success: {
+          DEFAULT: "rgb(var(--success) / <alpha-value>)",
+          bg: "rgb(var(--success-bg) / <alpha-value>)",
+          border: "rgb(var(--success-border) / <alpha-value>)",
+        },
+        warning: {
+          DEFAULT: "rgb(var(--warning) / <alpha-value>)",
+          bg: "rgb(var(--warning-bg) / <alpha-value>)",
+          border: "rgb(var(--warning-border) / <alpha-value>)",
         },
         // Gray scale is variable-driven so it inverts in light mode (the UI is
         // designed around light-on-dark text).
@@ -42,8 +60,20 @@ const config: Config = {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
       },
+      // Dense UI type scale. Each step carries its own line-height and
+      // tracking (Inter wants looser tracking small, tighter large).
+      fontSize: {
+        "2xs": ["11px", { lineHeight: "16px", letterSpacing: "0.005em" }],
+        xs: ["12px", { lineHeight: "16px", letterSpacing: "0em" }],
+        sm: ["14px", { lineHeight: "20px", letterSpacing: "-0.006em" }],
+        base: ["16px", { lineHeight: "24px", letterSpacing: "-0.011em" }],
+        lg: ["18px", { lineHeight: "26px", letterSpacing: "-0.014em" }],
+        xl: ["20px", { lineHeight: "28px", letterSpacing: "-0.017em" }],
+      },
       letterSpacing: {
         tightish: "-0.011em",
+        // All-caps labels need air between letters.
+        caps: "0.06em",
       },
     },
   },

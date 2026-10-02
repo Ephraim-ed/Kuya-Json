@@ -37,7 +37,7 @@ export default function ZoomControls({
       <button
         onClick={() => setSize(base)}
         title="Reset zoom"
-        className="min-w-[30px] border-x border-border px-1 py-0.5 text-center text-[11px] tabular-nums text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200"
+        className="min-w-[30px] border-x border-border px-1 py-0.5 text-center text-2xs tabular-nums text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200"
       >
         {size}
       </button>

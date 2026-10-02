@@ -107,7 +107,7 @@ export default function TreeSidebar({
               value={expandLevel}
               onChange={(e) => changeLevel(Number(e.target.value))}
               title="Expand to depth"
-              className="h-6 cursor-pointer border-x border-border bg-transparent pl-1.5 pr-0.5 text-[11px] tabular-nums text-gray-300 focus:outline-none"
+              className="h-6 cursor-pointer border-x border-border bg-transparent pl-1.5 pr-0.5 text-2xs tabular-nums text-gray-300 focus:outline-none"
             >
               <option value={1}>1</option>
               <option value={2}>2</option>
@@ -132,10 +132,10 @@ export default function TreeSidebar({
           {onClose && (
             <button
               onClick={onClose}
-              className="px-1 text-gray-400 hover:text-gray-200 lg:hidden"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200 lg:hidden"
               aria-label="Close tree"
             >
-              ✕
+              <X size={15} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -145,7 +145,7 @@ export default function TreeSidebar({
         {input.trim() === "" ? (
           <p className="p-3 text-xs text-gray-600">Paste JSON to see its tree.</p>
         ) : !tree ? (
-          <p className="p-3 text-xs text-red-400">
+          <p className="p-3 text-xs text-danger">
             {!parsed.ok ? parsed.error.message : "Invalid JSON."}
           </p>
         ) : filtered ? (

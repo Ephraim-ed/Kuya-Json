@@ -167,9 +167,9 @@ export function useConsole() {
 }
 
 const LEVEL_STYLE: Record<ConsoleLevel, string> = {
-  error: "text-red-400",
-  warn: "text-amber-300",
-  ok: "text-green-400",
+  error: "text-danger",
+  warn: "text-warning",
+  ok: "text-success",
   info: "text-gray-400",
 };
 const LEVEL_ICON: Record<ConsoleLevel, string> = {
@@ -299,18 +299,18 @@ export function DockPanel({
           "console",
           "Console",
           errors > 0 ? (
-            <span className="rounded bg-red-950 px-1.5 text-[10px] text-red-300">
+            <span className="rounded bg-danger-bg px-1.5 text-2xs text-danger">
               {errors}
             </span>
           ) : (
-            <span className="text-[10px] text-gray-600">{messages.length}</span>
+            <span className="text-2xs text-gray-600">{messages.length}</span>
           ),
         )}
         {tabBtn(
           "output",
           "Output",
           output ? (
-            <span className="text-[10px] text-gray-600">
+            <span className="text-2xs text-gray-600">
               {output.kind === "matches"
                 ? output.items.length
                 : output.kind === "table"
@@ -383,7 +383,7 @@ export function DockPanel({
                       }`}
                       title={clickable ? "Go to error" : undefined}
                     >
-                      <span className="text-[10px] text-gray-600">{fmtTime(m.at)}</span>
+                      <span className="text-2xs text-gray-600">{fmtTime(m.at)}</span>
                       <span className={LEVEL_STYLE[m.level]}>{LEVEL_ICON[m.level]}</span>
                       {m.source && <span className="text-gray-500">[{m.source}]</span>}
                       <span

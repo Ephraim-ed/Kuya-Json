@@ -14,7 +14,7 @@ export default function DiffTool({ input }: ToolProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-2 py-1.5">
-        <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+        <span className="text-xs font-medium uppercase tracking-caps text-gray-500">
           Compare two documents
         </span>
         <div className="ml-auto flex items-center gap-1.5">

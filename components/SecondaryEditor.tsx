@@ -44,7 +44,7 @@ export default function SecondaryEditor({
           onClick={onCloseSplit}
           title="Close this group"
           aria-label="Close this group"
-          className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-bg-softer hover:text-red-300"
+          className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-bg-softer hover:text-danger"
         >
           <X size={14} />
         </button>

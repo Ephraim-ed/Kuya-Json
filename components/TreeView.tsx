@@ -110,7 +110,7 @@ function Node({
                 onOpenSubtree(node.path);
               }}
               title="Open subtree in new workspace"
-              className="hidden px-1 text-[0.82em] text-gray-500 hover:text-accent group-hover:block"
+              className="hidden px-1 text-[0.82em] text-gray-500 hover:text-accent-fg group-hover:block"
             >
               ↗
             </button>

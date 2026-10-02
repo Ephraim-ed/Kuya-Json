@@ -11,13 +11,30 @@
   --bg-softer: 218 223 230;
   --border: 199 206 214;
 
+  /* Accent: fill carries white text (≥4.5:1); fg is accent-coloured text */
+  --accent: 9 105 218;
+  --accent-hover: 8 88 186;
+  --accent-fg: 8 96 202;
+
+  /* Status colours: fg is text (≥4.5:1), bg/border for callouts and toasts */
+  --danger: 180 35 24;
+  --danger-bg: 254 228 226;
+  --danger-border: 253 162 155;
+  --success: 6 118 71;
+  --success-bg: 220 250 230;
+  --success-border: 117 224 167;
+  --warning: 147 55 13;
+  --warning-bg: 254 240 199;
+  --warning-border: 254 200 75;
+
   --gray-50: 17 24 39;
   --gray-100: 31 41 55;
   --gray-200: 51 60 75;
   --gray-300: 71 81 97;
-  --gray-400: 95 105 120;
-  --gray-500: 100 108 119;
-  --gray-600: 116 124 135;
+  /* 400–600 are muted text; each clears 4.5:1 on bg and bg-soft */
+  --gray-400: 80 89 103;
+  --gray-500: 87 95 107;
+  --gray-600: 93 101 113;
   --gray-700: 180 187 196;
   --gray-800: 210 215 221;
   --gray-900: 226 230 235;
@@ -40,13 +57,27 @@
   --bg-softer: 33 38 45;
   --border: 48 54 61;
 
+  --accent: 31 111 235;
+  --accent-hover: 24 97 206;
+  --accent-fg: 88 166 255;
+
+  --danger: 252 165 165;
+  --danger-bg: 36 22 26;
+  --danger-border: 101 27 30;
+  --success: 134 239 172;
+  --success-bg: 17 33 30;
+  --success-border: 22 72 45;
+  --warning: 252 211 77;
+  --warning-bg: 40 32 18;
+  --warning-border: 120 85 20;
+
   --gray-50: 249 250 251;
   --gray-100: 243 244 246;
   --gray-200: 229 231 235;
   --gray-300: 209 213 219;
   --gray-400: 156 163 175;
-  --gray-500: 107 114 128;
-  --gray-600: 75 85 99;
+  --gray-500: 141 149 160;
+  --gray-600: 124 132 144;
   --gray-700: 55 65 81;
   --gray-800: 31 41 55;
   --gray-900: 17 24 39;
@@ -74,12 +105,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Typographic hierarchy */
+/* Typographic hierarchy. Size, line-height and tracking come from the
+   fontSize scale in tailwind.config.ts. */
 h1,
 h2,
 h3,
 h4 {
-  letter-spacing: -0.018em;
   text-wrap: balance;
 }
 h1 {
@@ -91,9 +122,27 @@ h2 {
 h3 {
   @apply text-sm font-semibold text-gray-200;
 }
+/* Zen mode: Japanese-style faces. Gothic for UI, Mincho for headings,
+   M PLUS 1 Code in the editor; a little more air between letters. */
+html.zen {
+  --font-sans: var(--font-zen-sans);
+  --font-mono: var(--font-zen-mono);
+}
+html.zen body {
+  font-feature-settings: normal;
+  letter-spacing: 0.02em;
+}
+html.zen h1,
+html.zen h2,
+html.zen h3,
+html.zen .font-zen-serif {
+  font-family: var(--font-zen-serif), "Hiragino Mincho ProN", "Yu Mincho", serif;
+  letter-spacing: 0.04em;
+}
+
 /* Small all-caps section labels */
 .label-eyebrow {
-  @apply text-[11px] font-medium uppercase tracking-wide text-gray-500;
+  @apply text-2xs font-medium uppercase tracking-caps text-gray-500;
 }
 
 /* CodeMirror sizing: let the editor flex to fill its container */
@@ -401,6 +450,40 @@ h3 {
   transform-origin: center;
 }
 
+/* Zen tour step: bamboo leaves drifting down behind the card. The outer
+   element falls; the inner svg sways and turns, so the path isn't a line. */
+@keyframes zen-fall {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10%,
+  85% {
+    opacity: var(--o, 0.8);
+  }
+  100% {
+    transform: translateY(var(--fall, 280px));
+    opacity: 0;
+  }
+}
+@keyframes zen-sway {
+  from {
+    transform: translateX(-10px) rotate(var(--r0, -30deg));
+  }
+  to {
+    transform: translateX(14px) rotate(var(--r1, 40deg));
+  }
+}
+.zen-leaf {
+  position: absolute;
+  top: -20px;
+  left: var(--x);
+  animation: zen-fall var(--d) linear var(--delay) infinite;
+}
+.zen-leaf > svg {
+  animation: zen-sway calc(var(--d) / 3) ease-in-out var(--delay) infinite alternate;
+}
+
 @keyframes caret-blink {
   0%,
   49% {
@@ -415,15 +498,38 @@ h3 {
   animation: caret-blink 1s steps(1) infinite;
 }
 
+/* Keyboard focus: one consistent ring for every control that doesn't draw its own */
+:focus-visible {
+  outline: 2px solid rgb(var(--accent-fg));
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-kuya-fade,
   .kuya-bob,
   .kuya-wave,
   .kuya-eyes,
   .kuya-sun,
   .kuya-z,
   .kuya-rise,
-  .animate-kuya-pop {
+  .animate-kuya-pop,
+  .zen-leaf,
+  .zen-leaf > svg {
     animation: none;
+  }
+  /* Leaves rest where they are instead of falling. */
+  .zen-leaf {
+    top: var(--rest-y);
+    opacity: var(--o, 0.8);
+  }
+  .zen-leaf > svg {
+    transform: rotate(var(--r0, -30deg));
   }
 }
 

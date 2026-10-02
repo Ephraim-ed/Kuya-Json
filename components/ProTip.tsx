@@ -8,7 +8,7 @@ const KEY = "kuya-json:protip-dismissed";
 
 function Kbd({ children }: { children: ReactNode }) {
   return (
-    <kbd className="rounded bg-bg px-1 font-mono text-[11px] text-accent">
+    <kbd className="rounded bg-bg px-1 font-mono text-2xs text-accent-fg">
       {children}
     </kbd>
   );
@@ -73,7 +73,7 @@ export default function ProTip() {
         <div className="flex items-center gap-2">
           <KuyaSprite size={28} />
           <p className="text-xs leading-relaxed text-gray-300">
-            <span className="font-semibold text-blue-500">Pro tip:</span> {tips[i]}
+            <span className="font-semibold text-accent-fg">Pro tip:</span> {tips[i]}
           </p>
           <button
             onClick={() => setI((n) => (n + 1) % tips.length)}

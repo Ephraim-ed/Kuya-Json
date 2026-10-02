@@ -201,7 +201,7 @@ export default function InputPanel({
       )}
 
       {dragging && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center border-2 border-dashed border-accent bg-bg/80 text-sm text-accent">
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center border-2 border-dashed border-accent bg-bg/80 text-sm text-accent-fg">
           Drop a .json file to load
         </div>
       )}

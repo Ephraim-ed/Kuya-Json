@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { Button } from "./ui";
+import { Dialog } from "./ui/dialog";
 
 interface ConfirmOptions {
   title: string;
@@ -31,7 +32,10 @@ interface ConfirmResult {
 
 type ConfirmFn = (o: ConfirmOptions) => Promise<ConfirmResult>;
 
-const Ctx = createContext<ConfirmFn>(async () => ({ confirmed: true, checked: false }));
+const Ctx = createContext<ConfirmFn>(async () => ({
+  confirmed: true,
+  checked: false,
+}));
 
 /** Returns an async `confirm(options)` resolving to `{ confirmed, checked }`. */
 export const useConfirm = () => useContext(Ctx);
@@ -40,6 +44,11 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [opts, setOpts] = useState<ConfirmOptions | null>(null);
   const [checked, setChecked] = useState(false);
   const resolver = useRef<((v: ConfirmResult) => void) | null>(null);
+  // Last options shown, so the dialog keeps its content while animating out.
+  const shown = useRef<ConfirmOptions | null>(null);
+  if (opts) shown.current = opts;
+  const confirmBtn = useRef<HTMLButtonElement>(null);
+  const cancelBtn = useRef<HTMLButtonElement>(null);
 
   const confirm = useCallback<ConfirmFn>((o) => {
     if (o.dontAskKey && localStorage.getItem(o.dontAskKey) === "1") {
@@ -70,36 +79,43 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!opts) return;
+    // Enter confirms, unless a button has focus — then that button's own
+    // click decides (so Enter on Cancel cancels). Escape is handled by Dialog.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") settle(false);
-      else if (e.key === "Enter") settle(true);
+      if (e.key === "Enter" && !(e.target instanceof HTMLButtonElement)) {
+        e.preventDefault();
+        settle(true);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [opts, settle]);
 
+  const o = shown.current;
+
   return (
     <Ctx.Provider value={confirm}>
       {children}
-      {opts && (
-        <div
-          className="animate-kuya-fade fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
-          onClick={() => settle(false)}
-        >
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            className="animate-kuya-pop w-full max-w-sm rounded-xl border border-border bg-bg-soft p-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-base font-semibold text-gray-100">{opts.title}</h2>
-            {opts.description && (
+      <Dialog
+        open={opts !== null}
+        onClose={() => settle(false)}
+        label={o?.title ?? "Confirm"}
+        role="alertdialog"
+        placement="center"
+        zIndex="z-[80]"
+        initialFocus={o?.danger ? cancelBtn : confirmBtn}
+        className="w-full max-w-sm rounded-xl border border-border bg-bg-soft p-5 shadow-2xl"
+      >
+        {o && (
+          <>
+            <h2 className="text-base font-semibold text-gray-100">{o.title}</h2>
+            {o.description && (
               <p className="mt-1.5 text-sm leading-relaxed text-gray-400">
-                {opts.description}
+                {o.description}
               </p>
             )}
 
-            {(opts.dontAskKey || opts.checkboxLabel) && (
+            {(o.dontAskKey || o.checkboxLabel) && (
               <label className="mt-4 flex cursor-pointer select-none items-center gap-2 text-xs text-gray-400">
                 <input
                   type="checkbox"
@@ -107,24 +123,25 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   onChange={(e) => setChecked(e.target.checked)}
                   className="h-3.5 w-3.5 cursor-pointer accent-accent"
                 />
-                {opts.checkboxLabel ?? "Don't ask me again"}
+                {o.checkboxLabel ?? "Don't ask me again"}
               </label>
             )}
 
             <div className="mt-5 flex justify-end gap-2">
-              <Button onClick={() => settle(false)}>
-                {opts.cancelLabel ?? "Cancel"}
+              <Button ref={cancelBtn} onClick={() => settle(false)}>
+                {o.cancelLabel ?? "Cancel"}
               </Button>
               <Button
-                variant={opts.danger ? "danger" : "primary"}
+                ref={confirmBtn}
+                variant={o.danger ? "danger" : "primary"}
                 onClick={() => settle(true)}
               >
-                {opts.confirmLabel ?? "Confirm"}
+                {o.confirmLabel ?? "Confirm"}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Dialog>
     </Ctx.Provider>
   );
 }

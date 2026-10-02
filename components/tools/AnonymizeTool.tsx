@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Split from "../Split";
-import { VenetianMask, Info, ShieldCheck } from "lucide-react";
+import { VenetianMask, Info, ShieldCheck, X } from "lucide-react";
 import { Banner, Button, Select } from "../ui";
 import Tooltip from "../Tooltip";
 import { useConsole } from "../console";
@@ -112,7 +112,7 @@ export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
               key={i}
               className="flex items-center gap-2 rounded bg-bg px-2 py-1 text-xs"
             >
-              <span className="rounded bg-bg-softer px-1.5 py-0.5 text-[10px] uppercase text-accent">
+              <span className="rounded bg-bg-softer px-1.5 py-0.5 text-2xs uppercase tracking-caps text-accent-fg">
                 {PII_LABELS[d.kind]}
               </span>
               <span className="truncate text-gray-400" title={d.displayPath}>
@@ -162,10 +162,11 @@ export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
               />
               <button
                 onClick={() => removeRule(r.id)}
-                className="px-1 text-gray-500 hover:text-red-300"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-bg-softer hover:text-danger"
                 title="Remove rule"
+                aria-label="Remove rule"
               >
-                ✕
+                <X size={14} aria-hidden="true" />
               </button>
             </div>
             <input
@@ -188,7 +189,7 @@ export default function AnonymizeTool({ input, setInput, editor }: ToolProps) {
   const rulesPanel = (
     <div className="flex h-full min-h-0 flex-col border-l border-border bg-bg-soft">
       <div className="flex items-center gap-2 border-b border-border px-2 py-1.5">
-        <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+        <span className="text-xs font-medium uppercase tracking-caps text-gray-500">
           Rules
         </span>
         <Button

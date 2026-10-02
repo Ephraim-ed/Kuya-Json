@@ -146,7 +146,7 @@ export default function Preferences({
             className="z-[100] w-60 rounded-md border border-border bg-bg-soft p-1.5 shadow-lg"
           >
             {/* File */}
-          <div className="px-1.5 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="px-1.5 pb-1 pt-0.5 text-2xs font-semibold uppercase tracking-caps text-gray-500">
             File
           </div>
           <button
@@ -191,7 +191,7 @@ export default function Preferences({
           <div className="my-1.5 border-t border-border" />
 
           {/* Preferences */}
-          <div className="px-1.5 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="px-1.5 pb-1 pt-0.5 text-2xs font-semibold uppercase tracking-caps text-gray-500">
             Preferences
           </div>
           <div className="flex items-center justify-between gap-3 rounded px-1.5 py-1.5 hover:bg-bg-softer">
@@ -216,11 +216,11 @@ export default function Preferences({
           </div>
 
           <div className="my-1.5 border-t border-border" />
-          <div className="px-1.5 pb-1 pt-0.5 text-[11px] leading-snug text-gray-500">
+          <div className="px-1.5 pb-1 pt-0.5 text-2xs leading-snug text-gray-500">
             Reach me out at{" "}
             <a
               href="mailto:ephraimvelasco@gmail.com"
-              className="text-accent hover:underline"
+              className="text-accent-fg hover:underline"
             >
               ephraimvelasco@gmail.com
             </a>

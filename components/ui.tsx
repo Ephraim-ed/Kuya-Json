@@ -4,10 +4,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
   type ReactNode,
+  type Ref,
 } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { motionTokens, springs } from "@/lib/motion-tokens";
+import { useSafeMotion } from "@/hooks/use-reduced-motion";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 
 // --- Button ----------------------------------------------------------------
@@ -23,7 +28,9 @@ export function Button({
   title,
   className = "",
   type = "button",
+  ref,
 }: {
+  ref?: Ref<HTMLButtonElement>;
   children: ReactNode;
   onClick?: () => void;
   variant?: Variant;
@@ -34,17 +41,18 @@ export function Button({
   type?: "button" | "submit";
 }) {
   const base =
-    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed select-none whitespace-nowrap";
+    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 select-none whitespace-nowrap";
   const variants: Record<Variant, string> = {
     primary: "bg-accent hover:bg-accent-hover text-white",
     ghost: `border border-border text-gray-300 hover:bg-bg-softer ${
-      active ? "bg-bg-softer text-white" : "bg-bg-soft"
+      active ? "bg-bg-softer text-gray-100" : "bg-bg-soft"
     }`,
     danger:
       "border border-red-300 bg-red-100 text-red-700 hover:bg-red-200 dark:border-red-900/60 dark:bg-bg-soft dark:text-red-300 dark:hover:bg-red-950/40",
   };
   return (
     <button
+      ref={ref}
       type={type}
       onClick={onClick}
       disabled={disabled}
@@ -122,8 +130,8 @@ export function Banner({
   children: ReactNode;
 }) {
   const styles = {
-    ok: "border-green-800/60 bg-green-950/30 text-green-300",
-    error: "border-red-800/60 bg-red-950/30 text-red-300",
+    ok: "border-success-border bg-success-bg text-success",
+    error: "border-danger-border bg-danger-bg text-danger",
     info: "border-border bg-bg-soft text-gray-300",
   };
   return (
@@ -148,36 +156,70 @@ type ShowToast = (message: string, opts?: ToastOpts) => void;
 const ToastCtx = createContext<ShowToast>(() => {});
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<{ message: string; kind: ToastKind } | null>(
-    null,
-  );
+  const [toast, setToast] = useState<{
+    id: number;
+    message: string;
+    kind: ToastKind;
+    duration: number;
+  } | null>(null);
   const timer = useRef<number | undefined>(undefined);
+  const nextId = useRef(0);
+  const safe = useSafeMotion(motionTokens.distance.md);
 
   const show = useCallback<ShowToast>((message, opts) => {
     const kind = opts?.kind ?? "info";
-    setToast({ message, kind });
-    window.clearTimeout(timer.current);
     const duration = opts?.duration ?? (kind === "error" ? 4500 : 1800);
-    timer.current = window.setTimeout(() => setToast(null), duration);
+    setToast({ id: ++nextId.current, message, kind, duration });
   }, []);
 
+  // Auto-dismiss; hovering pauses the countdown so the message can be read.
+  const startTimer = useCallback((ms: number) => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setToast(null), ms);
+  }, []);
+  useEffect(() => {
+    if (toast) startTimer(toast.duration);
+    return () => window.clearTimeout(timer.current);
+  }, [toast, startTimer]);
+
   const styles: Record<ToastKind, string> = {
-    ok: "border-green-700 bg-green-950 text-green-200",
-    error: "border-red-700 bg-red-950 text-red-200",
+    ok: "border-success-border bg-success-bg text-success",
+    error: "border-danger-border bg-danger-bg text-danger",
     info: "border-border bg-bg-softer text-gray-100",
   };
 
   return (
     <ToastCtx.Provider value={show}>
       {children}
-      {toast && (
-        <div
-          className={`fixed bottom-4 left-1/2 z-50 max-w-[90vw] -translate-x-1/2 cursor-pointer rounded-md border px-4 py-2 text-sm shadow-lg ${styles[toast.kind]}`}
-          onClick={() => setToast(null)}
-        >
-          {toast.message}
-        </div>
-      )}
+      <div
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4"
+      >
+        <AnimatePresence mode="wait">
+          {toast && (
+            <motion.div
+              key={toast.id}
+              role={toast.kind === "error" ? "alert" : undefined}
+              initial={safe.initial}
+              animate={safe.animate}
+              exit={{
+                ...safe.initial,
+                transition: {
+                  duration: motionTokens.duration.fast,
+                  ease: motionTokens.easing.sharp,
+                },
+              }}
+              transition={springs.snappy}
+              className={`pointer-events-auto max-w-[90vw] cursor-pointer rounded-md border px-4 py-2 text-sm shadow-lg ${styles[toast.kind]}`}
+              onClick={() => setToast(null)}
+              onMouseEnter={() => window.clearTimeout(timer.current)}
+              onMouseLeave={() => startTimer(1200)}
+            >
+              {toast.message}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </ToastCtx.Provider>
   );
 }

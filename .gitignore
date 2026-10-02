@@ -8,3 +8,7 @@
 .vercel
 next-env.d.ts
 *.tsbuildinfo
+
+# Agent skills (installed locally, not part of the app)
+/.claude/skills/
+/skills-lock.json

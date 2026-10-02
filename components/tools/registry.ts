@@ -7,13 +7,17 @@ import {
   FileCheck,
   Wand2,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import type { ToolMeta, ToolProps } from "./types";
 import FormatTool from "./FormatTool";
-import AnonymizeTool from "./AnonymizeTool";
-import ConvertTool from "./ConvertTool";
-import DiffTool from "./DiffTool";
-import SchemaTool from "./SchemaTool";
-import TransformTool from "./TransformTool";
+
+// Format is the default tool, so it ships with the page. The others pull in
+// heavy libraries (quicktype, faker, ajv, jsondiffpatch…) and load on first use.
+const AnonymizeTool = dynamic(() => import("./AnonymizeTool"), { ssr: false });
+const ConvertTool = dynamic(() => import("./ConvertTool"), { ssr: false });
+const DiffTool = dynamic(() => import("./DiffTool"), { ssr: false });
+const SchemaTool = dynamic(() => import("./SchemaTool"), { ssr: false });
+const TransformTool = dynamic(() => import("./TransformTool"), { ssr: false });
 
 export const TOOLS: (ToolMeta & { component: ComponentType<ToolProps> })[] = [
   {

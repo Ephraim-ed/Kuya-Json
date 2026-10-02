@@ -53,7 +53,7 @@ export default function ErrorScreen({
             {open ? "Hide" : "Show"} error details
           </button>
           {open && (
-            <pre className="mt-2 max-h-96 min-h-48 overflow-auto rounded-md border border-border bg-bg-soft p-3 text-left font-mono text-[11px] leading-relaxed text-red-300">
+            <pre className="mt-2 max-h-96 min-h-48 overflow-auto rounded-md border border-border bg-bg-soft p-3 text-left font-mono text-2xs leading-relaxed text-danger">
               {error?.message || "Unknown error"}
               {error?.digest ? `\n\ndigest: ${error.digest}` : ""}
               {error?.stack ? `\n\n${error.stack}` : ""}

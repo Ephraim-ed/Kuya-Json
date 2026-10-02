@@ -1,5 +1,7 @@
 "use client";
 
+import { X } from "lucide-react";
+import { Dialog } from "./ui/dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Banner, Button } from "./ui";
 import { useConsole, type OutputItem } from "./console";
@@ -110,15 +112,6 @@ export default function QueryModal({
     if (open) setTimeout(() => findRef.current?.focus(), 30);
   }, [open, mode]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
   // Keep index in range and highlight the current match.
   useEffect(() => {
     if (mode !== "find" || matches.length === 0) return;
@@ -127,8 +120,6 @@ export default function QueryModal({
     if (m) focusRange(m.from, m.to);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, matches]);
-
-  if (!open) return null;
 
   function step(dir: 1 | -1) {
     if (matches.length === 0) return;
@@ -151,7 +142,11 @@ export default function QueryModal({
 
   function sendAllToOutput() {
     if (matches.length === 0) {
-      setOutput({ kind: "matches", title: `No matches for "${query}"`, items: [] });
+      setOutput({
+        kind: "matches",
+        title: `No matches for "${query}"`,
+        items: [],
+      });
       onClose();
       return;
     }
@@ -161,11 +156,20 @@ export default function QueryModal({
       line: lineOf(input, m.from),
       preview: previewOf(input, m),
     }));
-    setOutput({ kind: "matches", title: `${items.length} matches for "${query}"`, items });
+    setOutput({
+      kind: "matches",
+      title: `${items.length} matches for "${query}"`,
+      items,
+    });
     onClose();
   }
 
-  const toggle = (on: boolean, label: string, title: string, fn: () => void) => (
+  const toggle = (
+    on: boolean,
+    label: string,
+    title: string,
+    fn: () => void,
+  ) => (
     <button
       onClick={fn}
       title={title}
@@ -178,151 +182,159 @@ export default function QueryModal({
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[8vh]"
-      onClick={onClose}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      label="Query JSON"
+      className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-bg-soft shadow-2xl"
     >
-      <div
-        className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-bg-soft shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2 border-b border-border p-2">
-          <Button active={mode === "find"} onClick={() => setMode("find")}>
-            Find &amp; Replace
-          </Button>
-          <Button active={mode === "jsonpath"} onClick={() => setMode("jsonpath")}>
-            JSONPath
-          </Button>
-          <button
-            onClick={onClose}
-            className="ml-auto px-2 text-gray-400 hover:text-gray-200"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
-
-        {mode === "find" ? (
-          <div className="space-y-2 p-3">
-            {/* Find row */}
-            <div className="flex items-center gap-2">
-              <input
-                ref={findRef}
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setIndex(0);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") step(e.shiftKey ? -1 : 1);
-                }}
-                placeholder="Find"
-                className={`min-w-0 flex-1 rounded border bg-bg px-2 py-1.5 font-mono text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent ${
-                  invalidRegex ? "border-red-700" : "border-border"
-                }`}
-              />
-              {toggle(caseSensitive, "Aa", "Match case", () =>
-                setCaseSensitive((v) => !v),
-              )}
-              {toggle(wholeWord, "\\b", "Whole word", () => setWholeWord((v) => !v))}
-              {toggle(useRegex, ".*", "Regular expression", () =>
-                setUseRegex((v) => !v),
-              )}
-              <span className="w-16 shrink-0 text-right text-xs text-gray-500">
-                {matches.length > 0
-                  ? `${Math.min(index + 1, matches.length)}/${matches.length}`
-                  : "0/0"}
-              </span>
-              <button
-                onClick={() => step(-1)}
-                disabled={matches.length === 0}
-                className="rounded px-1.5 py-1 text-gray-400 hover:bg-bg-softer disabled:opacity-40"
-                title="Previous (Shift+Enter)"
-              >
-                ↑
-              </button>
-              <button
-                onClick={() => step(1)}
-                disabled={matches.length === 0}
-                className="rounded px-1.5 py-1 text-gray-400 hover:bg-bg-softer disabled:opacity-40"
-                title="Next (Enter)"
-              >
-                ↓
-              </button>
-            </div>
-
-            {/* Replace row */}
-            <div className="flex items-center gap-2">
-              <input
-                value={replace}
-                onChange={(e) => setReplace(e.target.value)}
-                placeholder="Replace"
-                className="min-w-0 flex-1 rounded border border-border bg-bg px-2 py-1.5 font-mono text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-              <Button onClick={replaceCurrent} disabled={matches.length === 0}>
-                Replace
-              </Button>
-              <Button onClick={replaceAll} disabled={matches.length === 0}>
-                All
-              </Button>
-              <Button
-                variant="primary"
-                onClick={sendAllToOutput}
-                disabled={query === ""}
-                title="List all matches in the Output panel"
-              >
-                Find all
-              </Button>
-            </div>
-
-            {invalidRegex && <Banner kind="error">Invalid regular expression.</Banner>}
-          </div>
-        ) : (
-          <>
-            <div className="space-y-2 border-b border-border p-3">
-              <input
-                ref={findRef}
-                value={expr}
-                onChange={(e) => setExpr(e.target.value)}
-                placeholder="$..email"
-                className="w-full rounded border border-border bg-bg px-3 py-2 font-mono text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-              {!parsed.ok && input.trim() !== "" && (
-                <Banner kind="error">{parsed.error.message}</Banner>
-              )}
-              {jpResult && !jpResult.ok && <Banner kind="error">{jpResult.error}</Banner>}
-              {jpResult && jpResult.ok && expr.trim() !== "" && (
-                <p className="text-xs text-gray-500">
-                  {jpResult.matches.length} match(es)
-                </p>
-              )}
-            </div>
-            <div className="min-h-0 flex-1 overflow-auto p-2">
-              {jpResult && jpResult.ok && jpResult.matches.length > 0 ? (
-                <ul className="space-y-1">
-                  {jpResult.matches.map((m, i) => (
-                    <li key={i}>
-                      <button
-                        onClick={() => {
-                          onSelectPath?.(m.path);
-                          onClose();
-                        }}
-                        className="block w-full rounded px-2 py-1 text-left hover:bg-bg-softer"
-                      >
-                        <span className="font-mono text-xs text-sky-300">{m.path}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="p-3 text-sm text-gray-600">
-                  Enter a JSONPath expression. Click a result to jump to it.
-                </p>
-              )}
-            </div>
-          </>
-        )}
+      <div className="flex items-center gap-2 border-b border-border p-2">
+        <Button active={mode === "find"} onClick={() => setMode("find")}>
+          Find &amp; Replace
+        </Button>
+        <Button
+          active={mode === "jsonpath"}
+          onClick={() => setMode("jsonpath")}
+        >
+          JSONPath
+        </Button>
+        <button
+          onClick={onClose}
+          className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200"
+          aria-label="Close"
+        >
+          <X size={16} aria-hidden="true" />
+        </button>
       </div>
-    </div>
+
+      {mode === "find" ? (
+        <div className="space-y-2 p-3">
+          {/* Find row */}
+          <div className="flex items-center gap-2">
+            <input
+              ref={findRef}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setIndex(0);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") step(e.shiftKey ? -1 : 1);
+              }}
+              placeholder="Find"
+              className={`min-w-0 flex-1 rounded border bg-bg px-2 py-1.5 font-mono text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent ${
+                invalidRegex ? "border-danger-border" : "border-border"
+              }`}
+            />
+            {toggle(caseSensitive, "Aa", "Match case", () =>
+              setCaseSensitive((v) => !v),
+            )}
+            {toggle(wholeWord, "\\b", "Whole word", () =>
+              setWholeWord((v) => !v),
+            )}
+            {toggle(useRegex, ".*", "Regular expression", () =>
+              setUseRegex((v) => !v),
+            )}
+            <span className="w-16 shrink-0 text-right text-xs text-gray-500">
+              {matches.length > 0
+                ? `${Math.min(index + 1, matches.length)}/${matches.length}`
+                : "0/0"}
+            </span>
+            <button
+              onClick={() => step(-1)}
+              disabled={matches.length === 0}
+              className="rounded px-1.5 py-1 text-gray-400 hover:bg-bg-softer disabled:opacity-40"
+              title="Previous (Shift+Enter)"
+            >
+              ↑
+            </button>
+            <button
+              onClick={() => step(1)}
+              disabled={matches.length === 0}
+              className="rounded px-1.5 py-1 text-gray-400 hover:bg-bg-softer disabled:opacity-40"
+              title="Next (Enter)"
+            >
+              ↓
+            </button>
+          </div>
+
+          {/* Replace row */}
+          <div className="flex items-center gap-2">
+            <input
+              value={replace}
+              onChange={(e) => setReplace(e.target.value)}
+              placeholder="Replace"
+              className="min-w-0 flex-1 rounded border border-border bg-bg px-2 py-1.5 font-mono text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            <Button onClick={replaceCurrent} disabled={matches.length === 0}>
+              Replace
+            </Button>
+            <Button onClick={replaceAll} disabled={matches.length === 0}>
+              All
+            </Button>
+            <Button
+              variant="primary"
+              onClick={sendAllToOutput}
+              disabled={query === ""}
+              title="List all matches in the Output panel"
+            >
+              Find all
+            </Button>
+          </div>
+
+          {invalidRegex && (
+            <Banner kind="error">Invalid regular expression.</Banner>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2 border-b border-border p-3">
+            <input
+              ref={findRef}
+              value={expr}
+              onChange={(e) => setExpr(e.target.value)}
+              placeholder="$..email"
+              className="w-full rounded border border-border bg-bg px-3 py-2 font-mono text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            {!parsed.ok && input.trim() !== "" && (
+              <Banner kind="error">{parsed.error.message}</Banner>
+            )}
+            {jpResult && !jpResult.ok && (
+              <Banner kind="error">{jpResult.error}</Banner>
+            )}
+            {jpResult && jpResult.ok && expr.trim() !== "" && (
+              <p className="text-xs text-gray-500">
+                {jpResult.matches.length} match(es)
+              </p>
+            )}
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto p-2">
+            {jpResult && jpResult.ok && jpResult.matches.length > 0 ? (
+              <ul className="space-y-1">
+                {jpResult.matches.map((m, i) => (
+                  <li key={i}>
+                    <button
+                      onClick={() => {
+                        onSelectPath?.(m.path);
+                        onClose();
+                      }}
+                      className="block w-full rounded px-2 py-1 text-left hover:bg-bg-softer"
+                    >
+                      <span className="font-mono text-xs text-accent-fg">
+                        {m.path}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="p-3 text-sm text-gray-600">
+                Enter a JSONPath expression. Click a result to jump to it.
+              </p>
+            )}
+          </div>
+        </>
+      )}
+    </Dialog>
   );
 }

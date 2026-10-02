@@ -79,7 +79,7 @@ export default function SchemaTool({ input, editor }: ToolProps) {
   const results =
     mode === "validate" ? (
       <div className="flex h-full min-h-0 flex-col border-l border-border">
-        <div className="border-b border-border px-2 py-1 text-xs font-medium uppercase tracking-wide text-gray-500">
+        <div className="border-b border-border px-2 py-1 text-xs font-medium uppercase tracking-caps text-gray-500">
           Schema to validate against
         </div>
         <div className="min-h-0 flex-1">

@@ -31,7 +31,7 @@ export default function OutputPanel({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-2 py-1.5">
-        <span className="px-1 text-xs font-medium uppercase tracking-wide text-gray-500">
+        <span className="px-1 text-xs font-medium uppercase tracking-caps text-gray-500">
           Output
         </span>
         <div className="ml-auto flex items-center gap-2">

@@ -1,4 +1,12 @@
 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
   <rect width="64" height="64" rx="14" fill="#2f81f7"/>
-  <text x="32" y="34" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="28" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="central">{J}</text>
+  <g transform="translate(-4 -4) scale(0.72)">
+  <g fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M34,22 Q24,22 24,31.3 L24,42.5 Q24,50 16,50 Q24,50 24,57.5 L24,68.7 Q24,78 34,78"/>
+    <path d="M66,22 Q76,22 76,31.3 L76,42.5 Q76,50 84,50 Q76,50 76,57.5 L76,68.7 Q76,78 66,78"/>
+    <path d="M41,59 Q50,67 59,59"/>
+  </g>
+  <circle cx="41" cy="44" r="4.5" fill="#ffffff"/>
+  <circle cx="59" cy="44" r="4.5" fill="#ffffff"/>
+  </g>
 </svg>

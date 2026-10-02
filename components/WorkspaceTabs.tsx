@@ -255,7 +255,7 @@ export default function WorkspaceTabs({
           <span
             className={`shrink-0 ${
               openSides?.[w.id]
-                ? "text-accent"
+                ? "text-accent-fg"
                 : active
                   ? "text-blue-600 dark:text-yellow-400"
                   : "text-gray-500"
@@ -320,7 +320,7 @@ export default function WorkspaceTabs({
               if (confirmed) onClose(w.id);
             }}
             title="Delete workspace"
-            className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-red-300 ${
+            className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-danger ${
               active ? "" : "opacity-0 group-hover:opacity-100"
             }`}
           >
@@ -487,7 +487,7 @@ export default function WorkspaceTabs({
                       if (confirmed) onDeleteFolder?.(f.id, checked);
                     }}
                     title="Delete folder"
-                    className="flex h-4 w-4 items-center justify-center rounded-full text-gray-500 opacity-0 hover:bg-bg hover:text-red-300 group-hover:opacity-100"
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-gray-500 opacity-0 hover:bg-bg hover:text-danger group-hover:opacity-100"
                   >
                     <Trash2 size={11} />
                   </button>
@@ -627,7 +627,7 @@ export default function WorkspaceTabs({
             if (confirmed) onClose(w.id);
           }}
           title="Delete workspace"
-          className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-red-300 ${
+          className={`flex h-4 w-4 items-center justify-center rounded-full text-gray-500 hover:bg-bg hover:text-danger ${
             active ? "" : "opacity-0 group-hover:opacity-100"
           }`}
         >
@@ -692,7 +692,7 @@ export default function WorkspaceTabs({
                 }}
                 title="Click to collapse · double-click to rename · right-click for color"
                 style={{ color }}
-                className="flex cursor-pointer items-center gap-1 self-center px-1 text-[10px] font-medium"
+                className="flex cursor-pointer items-center gap-1 self-center px-1 text-2xs font-medium"
               >
                 {f.collapsed ? (
                   <ChevronRight size={11} />
@@ -710,7 +710,7 @@ export default function WorkspaceTabs({
                       if (e.key === "Enter") commitFolderH();
                       if (e.key === "Escape") setEditingFolderId(null);
                     }}
-                    className="w-20 rounded border border-accent bg-bg px-1 text-[10px] text-gray-100 focus:outline-none"
+                    className="w-20 rounded border border-accent bg-bg px-1 text-2xs text-gray-100 focus:outline-none"
                   />
                 ) : (
                   <span className="max-w-[90px] truncate">{f.name}</span>
@@ -746,7 +746,7 @@ export default function WorkspaceTabs({
             <div className="absolute right-0 top-full z-30 mt-1 max-h-80 w-56 overflow-y-auto rounded-md border border-border bg-bg-soft py-1 shadow-lg">
               {pinnedList.length > 0 && (
                 <>
-                  <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                  <div className="px-3 py-1 text-2xs font-semibold uppercase tracking-caps text-gray-500">
                     Pinned
                   </div>
                   {pinnedList.map((w) => (
@@ -765,7 +765,7 @@ export default function WorkspaceTabs({
                 </>
               )}
               {pinnedList.length > 0 && unpinnedList.length > 0 && (
-                <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                <div className="px-3 py-1 text-2xs font-semibold uppercase tracking-caps text-gray-500">
                   Tabs
                 </div>
               )}

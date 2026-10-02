@@ -9,9 +9,10 @@ import {
   type ReactNode,
 } from "react";
 import dynamic from "next/dynamic";
-import { Undo2, Redo2, X } from "lucide-react";
+import { Undo2, Redo2, X, Menu, CircleHelp } from "lucide-react";
 import GlobalSearchModal from "@/components/GlobalSearchModal";
 import InstallButton from "@/components/InstallButton";
+import KuyaLogo from "@/components/KuyaLogo";
 import InputPanel from "@/components/InputPanel";
 import TreeSidebar from "@/components/TreeSidebar";
 import SidebarPanel from "@/components/SidebarPanel";
@@ -90,6 +91,11 @@ export default function Page() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const inputEditor = useRef<JsonEditorHandle | null>(null);
   const { prefs, setPref } = usePreferences();
+
+  // Zen mode swaps the whole app to its Japanese-style typefaces (globals.css).
+  useEffect(() => {
+    document.documentElement.classList.toggle("zen", prefs.zenMode);
+  }, [prefs.zenMode]);
 
   useEffect(() => {
     setTreeCollapsed(localStorage.getItem("tree:collapsed") === "1");
@@ -585,7 +591,7 @@ export default function Page() {
           onClick={() => closeGroup(0)}
           title="Close left pane"
           aria-label="Close left pane"
-          className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-bg-softer hover:text-red-300"
+          className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-bg-softer hover:text-danger"
         >
           <X size={14} />
         </button>
@@ -866,14 +872,14 @@ function Header({
   zenMode: boolean;
 }) {
   // Zen mode: the header becomes a left sidebar (in-flow, shrinks the editor),
-  // with the {J} icon at the very top. All controls are uniform borderless icons.
+  // with the Kuya logo at the very top. All controls are uniform borderless icons.
   if (zenMode) {
     const iconBtn =
       "flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-bg-softer hover:text-gray-200 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-400";
     return (
       <div className="flex h-full shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-border bg-bg-soft p-1.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent font-mono text-[11px] font-bold tracking-tight text-white">
-          {"{J}"}
+        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-white">
+          <KuyaLogo size={20} />
         </span>
         <div className="my-0.5 h-px w-6 bg-border" />
         {TOOLS.map((t) => (
@@ -899,7 +905,7 @@ function Header({
             <Redo2 size={15} />
           </button>
           <button onClick={onOpenHelp} aria-label="Help" className={iconBtn}>
-            ?
+            <CircleHelp size={15} aria-hidden="true" />
           </button>
           {preferences}
         </div>
@@ -917,17 +923,17 @@ function Header({
             aria-label="Toggle tree"
             title="Toggle structure tree"
           >
-            ☰
+            <Menu size={16} aria-hidden="true" />
           </button>
         )}
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500 font-mono text-sm font-bold tracking-tight text-white shadow-sm">
-          {"{J}"}
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-white shadow-sm">
+          <KuyaLogo size={18} />
         </span>
         <div className="flex h-7 flex-col justify-center leading-none">
           <span className="text-[15px] font-semibold leading-none tracking-tightish text-gray-100">
             Kuya Json
           </span>
-          <span className="mt-0.5 text-[9px] font-normal leading-none text-gray-500">
+          <span className="mt-0.5 text-[10px] font-normal leading-none text-gray-500">
             built by ep
           </span>
         </div>

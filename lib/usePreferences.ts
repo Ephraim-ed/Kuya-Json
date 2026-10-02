@@ -16,7 +16,7 @@ const KEY = "kuya-json:preferences";
 
 const DEFAULTS: Preferences = {
   verticalTabs: true,
-  sidebarSplit: false,
+  sidebarSplit: true,
   zenMode: false,
 };
 
