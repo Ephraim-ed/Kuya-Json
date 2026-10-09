@@ -23,6 +23,8 @@ import {
   EditorSelection,
   RangeSetBuilder,
   Prec,
+  StateEffect,
+  StateField,
   type ChangeSpec,
 } from "@codemirror/state";
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
@@ -44,6 +46,14 @@ export interface EditorMarker {
 /** Imperative handle: select and scroll to a source range. */
 export interface JsonEditorHandle {
   focusRange: (from: number, to: number, opts?: { focus?: boolean }) => void;
+  /**
+   * Highlight Find results in the document; `active` is the index of the
+   * current one (drawn stronger). An empty list clears them.
+   */
+  setFindMatches: (
+    matches: { from: number; to: number }[],
+    active: number,
+  ) => void;
 }
 
 interface Props {
@@ -265,6 +275,34 @@ const commentTheme = EditorView.baseTheme({
   "&dark .cm-jsonc-comment": { color: "#5c6370 !important" },
 });
 
+// Find results, set from outside (the Find modal) and mapped through edits.
+const setFindMatchesEffect = StateEffect.define<DecorationSet>();
+const findMatchMark = Decoration.mark({ class: "cm-find-match" });
+const findActiveMark = Decoration.mark({
+  class: "cm-find-match cm-find-match-active",
+});
+
+const findMatchesField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(deco, tr) {
+    deco = deco.map(tr.changes);
+    for (const e of tr.effects) if (e.is(setFindMatchesEffect)) deco = e.value;
+    return deco;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+const findTheme = EditorView.baseTheme({
+  ".cm-find-match": {
+    backgroundColor: "rgb(var(--find) / 0.28)",
+    borderRadius: "2px",
+  },
+  ".cm-find-match-active": {
+    backgroundColor: "rgb(var(--find) / 0.6)",
+    boxShadow: "0 0 0 1px rgb(var(--find))",
+  },
+});
+
 // High precedence: Mod-Shift-k is CodeMirror's default "delete line".
 const commentKeymap = Prec.high(
   keymap.of([
@@ -314,6 +352,24 @@ const JsonEditor = forwardRef<JsonEditorHandle, Props>(function JsonEditor(
       });
       if (opts?.focus !== false) view.focus();
     },
+    setFindMatches(matches, active) {
+      const view = ref.current?.view;
+      if (!view) return;
+      const len = view.state.doc.length;
+      const ranges = matches
+        .map((m, i) => ({
+          from: Math.min(m.from, len),
+          to: Math.min(m.to, len),
+          i,
+        }))
+        .filter((m) => m.to > m.from)
+        .map((m) =>
+          (m.i === active ? findActiveMark : findMatchMark).range(m.from, m.to),
+        );
+      view.dispatch({
+        effects: setFindMatchesEffect.of(Decoration.set(ranges, true)),
+      });
+    },
   }));
 
   const extensions = useMemo(() => {
@@ -321,6 +377,8 @@ const JsonEditor = forwardRef<JsonEditorHandle, Props>(function JsonEditor(
       wrap,
       clickableLineNumbers,
       commentKeymap,
+      findMatchesField,
+      findTheme,
       EditorView.updateListener.of((u) => {
         if (
           u.selectionSet &&

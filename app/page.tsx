@@ -816,6 +816,9 @@ export default function Page() {
           inputEditor.current?.focusRange(from, to, { focus: false })
         }
         onSelectPath={onSelectPath}
+        highlightMatches={(matches, active) =>
+          inputEditor.current?.setFindMatches(matches, active)
+        }
       />
 
       <GlobalSearchModal

@@ -40,6 +40,8 @@ const config: Config = {
           bg: "rgb(var(--warning-bg) / <alpha-value>)",
           border: "rgb(var(--warning-border) / <alpha-value>)",
         },
+        // Find-match highlight (editor + Find results list).
+        find: "rgb(var(--find) / <alpha-value>)",
         // Gray scale is variable-driven so it inverts in light mode (the UI is
         // designed around light-on-dark text).
         gray: {

@@ -18,6 +18,7 @@ export function Dialog({
   role = "dialog",
   initialFocus,
   placement = "top",
+  dim = true,
   zIndex = "z-50",
   className,
   children,
@@ -29,8 +30,17 @@ export function Dialog({
   role?: "dialog" | "alertdialog";
   /** Element to focus on open; defaults to the first focusable control. */
   initialFocus?: RefObject<HTMLElement | null>;
-  /** "top" sits below the header like a command palette; "center" for confirmations. */
-  placement?: "top" | "center";
+  /**
+   * "top" sits below the header like a command palette; "top-right" docks
+   * beside the content (like an editor's find widget); "center" for
+   * confirmations.
+   */
+  placement?: "top" | "top-right" | "center";
+  /**
+   * Dim the page behind the panel. When false the page stays visible and
+   * scrollable underneath; clicking outside the panel still closes it.
+   */
+  dim?: boolean;
   zIndex?: string;
   className?: string;
   children: ReactNode;
@@ -45,6 +55,7 @@ export function Dialog({
           role={role}
           initialFocus={initialFocus}
           placement={placement}
+          dim={dim}
           zIndex={zIndex}
           className={className}
         >
@@ -61,6 +72,7 @@ function DialogBody({
   role,
   initialFocus,
   placement,
+  dim,
   zIndex,
   className,
   children,
@@ -69,7 +81,8 @@ function DialogBody({
   label: string;
   role: "dialog" | "alertdialog";
   initialFocus?: RefObject<HTMLElement | null>;
-  placement: "top" | "center";
+  placement: "top" | "top-right" | "center";
+  dim: boolean;
   zIndex: string;
   className?: string;
   children: ReactNode;
@@ -135,34 +148,50 @@ function DialogBody({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Undimmed: there's no backdrop to click, so close on any press outside.
+  useEffect(() => {
+    if (dim) return;
+    const onDown = (e: PointerEvent) => {
+      if (!panel.current?.contains(e.target as Node)) onCloseRef.current();
+    };
+    window.addEventListener("pointerdown", onDown);
+    return () => window.removeEventListener("pointerdown", onDown);
+  }, [dim]);
+
   const offset = reduce ? 0 : -motionTokens.distance.sm;
   const scale = reduce ? 1 : motionTokens.scale.subtle;
 
   return (
     <div
-      className={`fixed inset-0 ${zIndex} flex justify-center p-4 ${
-        placement === "top" ? "items-start pt-[8vh]" : "items-center"
-      }`}
+      className={`fixed inset-0 ${zIndex} flex p-4 ${
+        placement === "center"
+          ? "items-center justify-center"
+          : placement === "top-right"
+            ? "items-start justify-center pt-[8vh] sm:justify-end sm:pr-6"
+            : "items-start justify-center pt-[8vh]"
+      } ${dim ? "" : "pointer-events-none"}`}
     >
-      <motion.div
-        aria-hidden="true"
-        className="absolute inset-0 bg-black/60"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{
-          duration: motionTokens.duration.fast,
-          ease: motionTokens.easing.smooth,
-        }}
-        onClick={onClose}
-      />
+      {dim && (
+        <motion.div
+          aria-hidden="true"
+          className="absolute inset-0 bg-black/60"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{
+            duration: motionTokens.duration.fast,
+            ease: motionTokens.easing.smooth,
+          }}
+          onClick={onClose}
+        />
+      )}
       <motion.div
         ref={panel}
         role={role}
         aria-modal="true"
         aria-label={label}
         tabIndex={-1}
-        className={`relative outline-none ${className ?? ""}`}
+        className={`pointer-events-auto relative outline-none ${className ?? ""}`}
         initial={{ opacity: 0, y: offset, scale }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{
