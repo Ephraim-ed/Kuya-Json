@@ -1,5 +1,7 @@
 # Kuya Json
 
+Built by Ephraim Velasco
+
 A privacy-first web app for managing, transforming, and anonymizing JSON. **All
 processing happens in your browser** — no JSON is ever uploaded to a server.
 
